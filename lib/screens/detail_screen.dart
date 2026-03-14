@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
 import '../models/artwork.dart';
 import '../services/art_api.dart';
 import '../services/translate_service.dart';
@@ -106,6 +107,20 @@ class _DetailScreenState extends State<DetailScreen> {
               icon: const Icon(Icons.arrow_back, color: Colors.white),
               onPressed: () => Navigator.pop(context),
             ),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.share, color: Colors.white),
+                onPressed: () {
+                  final jaArtist = TranslateService.translateArtist(artwork.artist);
+                  final jaTitle = _translatedTitle ?? artwork.title;
+                  SharePlus.instance.share(
+                    ShareParams(
+                      text: '$jaTitle\n$jaArtist（${artwork.date}）\n\nhttps://www.artic.edu/artworks/${artwork.id}',
+                    ),
+                  );
+                },
+              ),
+            ],
             flexibleSpace: FlexibleSpaceBar(
               background: artwork.imageUrl != null
                   ? InteractiveViewer(

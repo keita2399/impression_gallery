@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../models/artwork.dart';
 import '../services/art_api.dart';
 import '../services/firestore_service.dart';
+import '../services/translate_service.dart';
+import 'detail_screen.dart';
 
 class FavoritesScreen extends StatefulWidget {
   const FavoritesScreen({super.key});
@@ -47,19 +49,37 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     }
   }
 
+  Future<void> _removeFavorite(Artwork artwork) async {
+    await FirestoreService.removeFavorite(artwork.id);
+    setState(() {
+      _favorites.removeWhere((a) => a.id == artwork.id);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return SafeArea(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
-            padding: EdgeInsets.fromLTRB(24, 24, 24, 16),
-            child: Text(
-              'マイコレクション',
-              style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 4),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'マイコレクション',
+                  style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold),
+                ),
+                if (_favorites.isNotEmpty)
+                  Text(
+                    '${_favorites.length}作品',
+                    style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 14),
+                  ),
+              ],
             ),
           ),
+          const SizedBox(height: 12),
           Expanded(child: _buildContent()),
         ],
       ),
@@ -102,57 +122,95 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
       itemCount: _favorites.length,
       itemBuilder: (context, index) {
         final artwork = _favorites[index];
-        return ClipRRect(
-          borderRadius: BorderRadius.circular(12),
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              if (artwork.imageUrl != null)
-                Image.network(
-                  artwork.imageUrl!,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stack) {
-                    return Container(
-                      color: Colors.grey[900],
-                      child: const Icon(Icons.broken_image, color: Colors.white24),
-                    );
-                  },
-                ),
-              Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [Colors.transparent, Colors.black.withValues(alpha: 0.7)],
-                    stops: const [0.5, 1.0],
+        final jaArtist = TranslateService.translateArtist(artwork.artist);
+
+        return GestureDetector(
+          onTap: () async {
+            await Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => DetailScreen(artwork: artwork)),
+            );
+          },
+          onLongPress: () => _showDeleteDialog(artwork),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                if (artwork.imageUrl != null)
+                  Image.network(
+                    artwork.imageUrl!,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stack) {
+                      return Container(
+                        color: Colors.grey[900],
+                        child: const Icon(Icons.broken_image, color: Colors.white24),
+                      );
+                    },
+                  ),
+                Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [Colors.transparent, Colors.black.withValues(alpha: 0.8)],
+                      stops: const [0.4, 1.0],
+                    ),
                   ),
                 ),
-              ),
-              Positioned(
-                bottom: 8,
-                left: 8,
-                right: 8,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      artwork.title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      artwork.artist,
-                      style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 10),
-                    ),
-                  ],
+                Positioned(
+                  bottom: 8,
+                  left: 8,
+                  right: 8,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        artwork.title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        jaArtist,
+                        style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 10),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         );
       },
+    );
+  }
+
+  void _showDeleteDialog(Artwork artwork) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1a1a1a),
+        title: const Text('コレクションから削除', style: TextStyle(color: Colors.white, fontSize: 16)),
+        content: Text(
+          '「${artwork.title}」をコレクションから削除しますか？',
+          style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('キャンセル', style: TextStyle(color: Colors.white54)),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _removeFavorite(artwork);
+            },
+            child: const Text('削除', style: TextStyle(color: Colors.redAccent)),
+          ),
+        ],
+      ),
     );
   }
 }

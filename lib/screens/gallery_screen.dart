@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
 import '../models/artwork.dart';
 import '../services/art_api.dart';
 import '../services/firestore_service.dart';
 import '../services/translate_service.dart';
 import 'detail_screen.dart';
+import 'search_screen.dart';
 
 class GalleryScreen extends StatefulWidget {
   const GalleryScreen({super.key});
@@ -157,31 +159,49 @@ class _GalleryScreenState extends State<GalleryScreen> {
                   style: const TextStyle(color: Colors.white70, fontSize: 13),
                 ),
               ),
-              GestureDetector(
-                onTap: _showArtistFilter,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: _selectedArtist != null
-                        ? Colors.amber.withValues(alpha: 0.3)
-                        : Colors.black.withValues(alpha: 0.5),
-                    borderRadius: BorderRadius.circular(20),
-                    border: _selectedArtist != null
-                        ? Border.all(color: Colors.amber.withValues(alpha: 0.5))
-                        : null,
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.filter_list, color: Colors.white70, size: 16),
-                      const SizedBox(width: 4),
-                      Text(
-                        _selectedArtist != null ? TranslateService.translateArtist(_selectedArtist!) : 'すべて',
-                        style: const TextStyle(color: Colors.white70, fontSize: 13),
+              Row(
+                children: [
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => const SearchScreen()));
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.5),
+                        shape: BoxShape.circle,
                       ),
-                    ],
+                      child: const Icon(Icons.search, color: Colors.white70, size: 20),
+                    ),
                   ),
-                ),
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: _showArtistFilter,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: _selectedArtist != null
+                            ? Colors.amber.withValues(alpha: 0.3)
+                            : Colors.black.withValues(alpha: 0.5),
+                        borderRadius: BorderRadius.circular(20),
+                        border: _selectedArtist != null
+                            ? Border.all(color: Colors.amber.withValues(alpha: 0.5))
+                            : null,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.filter_list, color: Colors.white70, size: 16),
+                          const SizedBox(width: 4),
+                          Text(
+                            _selectedArtist != null ? TranslateService.translateArtist(_selectedArtist!) : 'すべて',
+                            style: const TextStyle(color: Colors.white70, fontSize: 13),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -245,6 +265,21 @@ class _GalleryScreenState extends State<GalleryScreen> {
                   color: isFav ? Colors.redAccent : Colors.white,
                   label: isFav ? '保存済' : '保存',
                   onTap: () => _toggleFavorite(artwork.id),
+                ),
+                const SizedBox(height: 20),
+                _sideButton(
+                  icon: Icons.share_outlined,
+                  color: Colors.white,
+                  label: 'シェア',
+                  onTap: () {
+                    final jaArtist = TranslateService.translateArtist(artwork.artist);
+                    final jaTitle = translatedTitle ?? artwork.title;
+                    SharePlus.instance.share(
+                      ShareParams(
+                        text: '$jaTitle\n$jaArtist（${artwork.date}）\n\nhttps://www.artic.edu/artworks/${artwork.id}',
+                      ),
+                    );
+                  },
                 ),
                 const SizedBox(height: 20),
                 _sideButton(
