@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1027153706332",
+    "project_id": "impression-gallery-e99fa",
+    "storage_bucket": "impression-gallery-e99fa.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1027153706332:android:8b678bee12fa61b8c95599",
+        "android_client_info": {
+          "package_name": "com.example.impression_gallery"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBGP4dVBQCgjs0zxvLsGGBmQzT4nUNU6pI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

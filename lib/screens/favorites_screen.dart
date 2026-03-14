@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../models/artwork.dart';
 import '../services/art_api.dart';
+import '../services/firestore_service.dart';
 
 class FavoritesScreen extends StatefulWidget {
   const FavoritesScreen({super.key});
@@ -27,9 +27,8 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
   }
 
   Future<void> _loadFavorites() async {
-    final prefs = await SharedPreferences.getInstance();
-    final savedIds = prefs.getStringList('favorites') ?? [];
-    if (savedIds.isEmpty) {
+    final favSet = await FirestoreService.getFavoriteIds();
+    if (favSet.isEmpty) {
       setState(() {
         _favorites = [];
         _loading = false;
@@ -39,7 +38,6 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
 
     try {
       final allWorks = await ArtApi.fetchImpressionistWorks(limit: 100);
-      final favSet = savedIds.map((s) => int.parse(s)).toSet();
       setState(() {
         _favorites = allWorks.where((a) => favSet.contains(a.id)).toList();
         _loading = false;

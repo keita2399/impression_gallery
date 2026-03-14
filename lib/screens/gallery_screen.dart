@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../models/artwork.dart';
 import '../services/art_api.dart';
+import '../services/firestore_service.dart';
 import '../services/translate_service.dart';
 import 'detail_screen.dart';
 
@@ -29,9 +29,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
 
   Future<void> _loadData() async {
     setState(() => _loading = true);
-    final prefs = await SharedPreferences.getInstance();
-    final savedIds = prefs.getStringList('favorites') ?? [];
-    _favoriteIds = savedIds.map((s) => int.parse(s)).toSet();
+    _favoriteIds = await FirestoreService.getFavoriteIds();
 
     try {
       final works = await ArtApi.fetchImpressionistWorks(
@@ -63,15 +61,14 @@ class _GalleryScreenState extends State<GalleryScreen> {
   }
 
   Future<void> _toggleFavorite(int id) async {
-    final prefs = await SharedPreferences.getInstance();
+    final isFav = await FirestoreService.toggleFavorite(id);
     setState(() {
-      if (_favoriteIds.contains(id)) {
-        _favoriteIds.remove(id);
-      } else {
+      if (isFav) {
         _favoriteIds.add(id);
+      } else {
+        _favoriteIds.remove(id);
       }
     });
-    await prefs.setStringList('favorites', _favoriteIds.map((i) => i.toString()).toList());
   }
 
   void _showArtistFilter() {

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/artwork.dart';
 import '../services/art_api.dart';
+import '../services/firestore_service.dart';
 import '../services/translate_service.dart';
 import 'detail_screen.dart';
 
@@ -87,10 +88,7 @@ class _GachaScreenState extends State<GachaScreen> with SingleTickerProviderStat
     await prefs.setInt('gacha_result', artwork.id);
 
     // Add to favorites automatically
-    final savedIds = prefs.getStringList('favorites') ?? [];
-    final favSet = savedIds.toSet();
-    favSet.add(artwork.id.toString());
-    await prefs.setStringList('favorites', favSet.toList());
+    await FirestoreService.addFavorite(artwork.id);
 
     setState(() {
       _result = artwork;
