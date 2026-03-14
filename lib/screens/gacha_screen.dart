@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/artwork.dart';
 import '../services/art_api.dart';
@@ -23,6 +24,8 @@ class _GachaScreenState extends State<GachaScreen> with SingleTickerProviderStat
   late AnimationController _animController;
   late Animation<double> _scaleAnim;
   String? _translatedTitle;
+  List<Artwork> _history = [];
+  bool _showHistory = false;
 
   @override
   void initState() {
@@ -43,6 +46,18 @@ class _GachaScreenState extends State<GachaScreen> with SingleTickerProviderStat
         _allWorks = works;
         _loading = false;
       });
+
+      // Load gacha history
+      final historyIds = prefs.getStringList('gacha_history') ?? [];
+      final historyWorks = <Artwork>[];
+      for (final idStr in historyIds.reversed) {
+        final id = int.tryParse(idStr);
+        if (id != null) {
+          final match = works.where((w) => w.id == id).toList();
+          if (match.isNotEmpty) historyWorks.add(match.first);
+        }
+      }
+      setState(() => _history = historyWorks);
 
       if (lastDate == today) {
         final savedId = prefs.getInt('gacha_result');
@@ -90,10 +105,20 @@ class _GachaScreenState extends State<GachaScreen> with SingleTickerProviderStat
     // Add to favorites automatically
     await FirestoreService.addFavorite(artwork.id);
 
+    // Save to history
+    final historyIds = prefs.getStringList('gacha_history') ?? [];
+    if (!historyIds.contains(artwork.id.toString())) {
+      historyIds.add(artwork.id.toString());
+      await prefs.setStringList('gacha_history', historyIds);
+    }
+
     setState(() {
       _result = artwork;
       _rolling = false;
       _alreadyDrawnToday = true;
+      if (!_history.any((h) => h.id == artwork.id)) {
+        _history.insert(0, artwork);
+      }
     });
     _animController.forward();
     _translateResult(artwork);
@@ -118,9 +143,33 @@ class _GachaScreenState extends State<GachaScreen> with SingleTickerProviderStat
             '毎日ひとつ、新しい名画と出会おう',
             style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 14),
           ),
-          const SizedBox(height: 32),
+          if (_history.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: GestureDetector(
+                onTap: () => setState(() => _showHistory = !_showHistory),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      _showHistory ? Icons.expand_less : Icons.history,
+                      color: Colors.white38,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      _showHistory ? '閉じる' : '過去の記録（${_history.length}作品）',
+                      style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 13),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+          const SizedBox(height: 16),
           Expanded(
-            child: _result != null ? _buildResult() : _buildDrawButton(),
+            child: _showHistory ? _buildHistory() : (_result != null ? _buildResult() : _buildDrawButton()),
           ),
         ],
       ),
@@ -141,11 +190,13 @@ class _GachaScreenState extends State<GachaScreen> with SingleTickerProviderStat
             const SizedBox(height: 24),
             const Text('抽選中...', style: TextStyle(color: Colors.white70, fontSize: 16)),
           ] else ...[
-            GestureDetector(
-              onTap: _drawGacha,
-              child: Container(
-                width: 160,
-                height: 160,
+            MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: GestureDetector(
+                onTap: _drawGacha,
+                child: Container(
+                  width: 160,
+                  height: 160,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: const LinearGradient(
@@ -170,6 +221,7 @@ class _GachaScreenState extends State<GachaScreen> with SingleTickerProviderStat
                   ],
                 ),
               ),
+              ),
             ),
             const SizedBox(height: 24),
             Text(
@@ -188,13 +240,15 @@ class _GachaScreenState extends State<GachaScreen> with SingleTickerProviderStat
       scale: _scaleAnim,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 24),
-        child: GestureDetector(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => DetailScreen(artwork: artwork)),
-            );
-          },
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(fullscreenDialog: true, builder: (_) => DetailScreen(artwork: artwork)),
+              );
+            },
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -213,16 +267,17 @@ class _GachaScreenState extends State<GachaScreen> with SingleTickerProviderStat
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(16),
                   child: artwork.imageUrl != null
-                      ? Image.network(
-                          artwork.imageUrl!,
+                      ? CachedNetworkImage(
+                          imageUrl: artwork.imageUrl!,
                           fit: BoxFit.contain,
-                          loadingBuilder: (context, child, progress) {
-                            if (progress == null) return child;
-                            return const SizedBox(
-                              height: 200,
-                              child: Center(child: CircularProgressIndicator()),
-                            );
-                          },
+                          placeholder: (context, url) => const SizedBox(
+                            height: 200,
+                            child: Center(child: CircularProgressIndicator()),
+                          ),
+                          errorWidget: (context, url, error) => const SizedBox(
+                            height: 200,
+                            child: Center(child: Icon(Icons.broken_image, color: Colors.white54)),
+                          ),
                         )
                       : const SizedBox(height: 200),
                 ),
@@ -273,7 +328,75 @@ class _GachaScreenState extends State<GachaScreen> with SingleTickerProviderStat
             ],
           ),
         ),
+        ),
       ),
+    );
+  }
+
+  Widget _buildHistory() {
+    return GridView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        crossAxisSpacing: 8,
+        mainAxisSpacing: 8,
+        childAspectRatio: 0.75,
+      ),
+      itemCount: _history.length,
+      itemBuilder: (context, index) {
+        final artwork = _history[index];
+        final jaArtist = TranslateService.translateArtist(artwork.artist);
+        return MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(fullscreenDialog: true, builder: (_) => DetailScreen(artwork: artwork)),
+              );
+            },
+            child: ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                if (artwork.imageUrl != null)
+                  CachedNetworkImage(
+                    imageUrl: artwork.imageUrl!,
+                    fit: BoxFit.cover,
+                    placeholder: (context, url) => Container(color: Colors.grey[900]),
+                    errorWidget: (context, url, error) => Container(
+                      color: Colors.grey[900],
+                      child: const Icon(Icons.broken_image, color: Colors.white24),
+                    ),
+                  ),
+                Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [Colors.transparent, Colors.black.withValues(alpha: 0.8)],
+                      stops: const [0.4, 1.0],
+                    ),
+                  ),
+                ),
+                Positioned(
+                  bottom: 6,
+                  left: 6,
+                  right: 6,
+                  child: Text(
+                    jaArtist,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(color: Colors.white70, fontSize: 10),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          ),
+        );
+      },
     );
   }
 

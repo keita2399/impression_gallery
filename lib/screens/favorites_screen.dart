@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../models/artwork.dart';
 import '../services/art_api.dart';
 import '../services/firestore_service.dart';
@@ -124,29 +125,31 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
         final artwork = _favorites[index];
         final jaArtist = TranslateService.translateArtist(artwork.artist);
 
-        return GestureDetector(
-          onTap: () async {
-            await Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => DetailScreen(artwork: artwork)),
-            );
-          },
-          onLongPress: () => _showDeleteDialog(artwork),
+        return MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: GestureDetector(
+            onTap: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(fullscreenDialog: true, builder: (_) => DetailScreen(artwork: artwork)),
+              );
+              _loadFavorites();
+            },
+            onLongPress: () => _showDeleteDialog(artwork),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(12),
             child: Stack(
               fit: StackFit.expand,
               children: [
                 if (artwork.imageUrl != null)
-                  Image.network(
-                    artwork.imageUrl!,
+                  CachedNetworkImage(
+                    imageUrl: artwork.imageUrl!,
                     fit: BoxFit.cover,
-                    errorBuilder: (context, error, stack) {
-                      return Container(
-                        color: Colors.grey[900],
-                        child: const Icon(Icons.broken_image, color: Colors.white24),
-                      );
-                    },
+                    placeholder: (context, url) => Container(color: Colors.grey[900]),
+                    errorWidget: (context, url, error) => Container(
+                      color: Colors.grey[900],
+                      child: const Icon(Icons.broken_image, color: Colors.white24),
+                    ),
                   ),
                 Container(
                   decoration: BoxDecoration(
@@ -182,6 +185,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
               ],
             ),
           ),
+        ),
         );
       },
     );

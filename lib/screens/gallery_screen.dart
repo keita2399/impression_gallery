@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:share_plus/share_plus.dart';
 import '../models/artwork.dart';
 import '../services/art_api.dart';
 import '../services/firestore_service.dart';
 import '../services/translate_service.dart';
 import 'detail_screen.dart';
-import 'search_screen.dart';
 
 class GalleryScreen extends StatefulWidget {
   const GalleryScreen({super.key});
@@ -16,12 +16,15 @@ class GalleryScreen extends StatefulWidget {
 
 class _GalleryScreenState extends State<GalleryScreen> {
   final PageController _pageController = PageController();
+  final TextEditingController _searchController = TextEditingController();
   List<Artwork> _artworks = [];
+  List<Artwork> _filteredArtworks = [];
   Set<int> _favoriteIds = {};
   bool _loading = true;
   int _currentPage = 0;
   String? _selectedArtist;
   final Map<int, String> _translatedTitles = {};
+  bool _panelOpen = false;
 
   @override
   void initState() {
@@ -40,6 +43,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
       );
       setState(() {
         _artworks = works;
+        _filteredArtworks = works;
         _loading = false;
         _currentPage = 0;
       });
@@ -48,6 +52,9 @@ class _GalleryScreenState extends State<GalleryScreen> {
       }
       if (works.isNotEmpty) {
         _translateTitle(works[0]);
+      }
+      for (final w in works) {
+        _translateTitle(w);
       }
     } catch (e) {
       setState(() => _loading = false);
@@ -71,6 +78,34 @@ class _GalleryScreenState extends State<GalleryScreen> {
         _favoriteIds.remove(id);
       }
     });
+  }
+
+  void _searchArtworks(String query) {
+    if (query.isEmpty) {
+      setState(() => _filteredArtworks = _artworks);
+      return;
+    }
+    final lower = query.toLowerCase();
+    setState(() {
+      _filteredArtworks = _artworks.where((a) {
+        final jaArtist = TranslateService.translateArtist(a.artist).toLowerCase();
+        final jaTitle = (_translatedTitles[a.id] ?? '').toLowerCase();
+        return a.title.toLowerCase().contains(lower) ||
+            a.artist.toLowerCase().contains(lower) ||
+            jaArtist.contains(lower) ||
+            jaTitle.contains(lower) ||
+            a.date.toLowerCase().contains(lower);
+      }).toList();
+    });
+  }
+
+  void _selectArtwork(Artwork artwork) {
+    final index = _artworks.indexOf(artwork);
+    if (index >= 0 && _pageController.hasClients) {
+      _pageController.jumpToPage(index);
+      setState(() => _currentPage = index);
+      _translateTitle(artwork);
+    }
   }
 
   void _showArtistFilter() {
@@ -124,87 +159,246 @@ class _GalleryScreenState extends State<GalleryScreen> {
       return const Center(child: Text('作品が見つかりません', style: TextStyle(color: Colors.white)));
     }
 
-    return Stack(
+    return Row(
       children: [
-        PageView.builder(
-          controller: _pageController,
-          scrollDirection: Axis.vertical,
-          itemCount: _artworks.length,
-          onPageChanged: (i) {
-            setState(() => _currentPage = i);
-            _translateTitle(_artworks[i]);
-            // Pre-translate next page
-            if (i + 1 < _artworks.length) {
-              _translateTitle(_artworks[i + 1]);
-            }
-          },
-          itemBuilder: (context, index) => _buildArtworkPage(_artworks[index]),
-        ),
-        // Top bar
-        Positioned(
-          top: 50,
-          left: 16,
-          right: 16,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        // Left: Main artwork area
+        Expanded(
+          child: Stack(
             children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.5),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  '${_currentPage + 1} / ${_artworks.length}',
-                  style: const TextStyle(color: Colors.white70, fontSize: 13),
-                ),
+              PageView.builder(
+                controller: _pageController,
+                scrollDirection: Axis.vertical,
+                itemCount: _artworks.length,
+                onPageChanged: (i) {
+                  setState(() => _currentPage = i);
+                  _translateTitle(_artworks[i]);
+                  if (i + 1 < _artworks.length) {
+                    _translateTitle(_artworks[i + 1]);
+                  }
+                },
+                itemBuilder: (context, index) => _buildArtworkPage(_artworks[index]),
               ),
-              Row(
-                children: [
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.push(context, MaterialPageRoute(builder: (_) => const SearchScreen()));
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
+              // Top bar
+              Positioned(
+                top: 50,
+                left: 24,
+                right: 24,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                       decoration: BoxDecoration(
                         color: Colors.black.withValues(alpha: 0.5),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.search, color: Colors.white70, size: 20),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  GestureDetector(
-                    onTap: _showArtistFilter,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: _selectedArtist != null
-                            ? Colors.amber.withValues(alpha: 0.3)
-                            : Colors.black.withValues(alpha: 0.5),
                         borderRadius: BorderRadius.circular(20),
-                        border: _selectedArtist != null
-                            ? Border.all(color: Colors.amber.withValues(alpha: 0.5))
-                            : null,
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.filter_list, color: Colors.white70, size: 16),
-                          const SizedBox(width: 4),
-                          Text(
-                            _selectedArtist != null ? TranslateService.translateArtist(_selectedArtist!) : 'すべて',
-                            style: const TextStyle(color: Colors.white70, fontSize: 13),
-                          ),
-                        ],
+                      child: Text(
+                        '${_currentPage + 1} / ${_artworks.length}',
+                        style: const TextStyle(color: Colors.white70, fontSize: 14),
                       ),
                     ),
-                  ),
-                ],
+                    Row(
+                      children: [
+                        _iconButton(
+                          icon: Icons.search,
+                          isActive: _panelOpen,
+                          onTap: () => setState(() {
+                            _panelOpen = !_panelOpen;
+                            if (!_panelOpen) {
+                              _searchController.clear();
+                              _filteredArtworks = _artworks;
+                            }
+                          }),
+                        ),
+                        const SizedBox(width: 8),
+                        MouseRegion(
+                          cursor: SystemMouseCursors.click,
+                          child: GestureDetector(
+                          onTap: _showArtistFilter,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: _selectedArtist != null
+                                  ? Colors.amber.withValues(alpha: 0.3)
+                                  : Colors.black.withValues(alpha: 0.5),
+                              borderRadius: BorderRadius.circular(20),
+                              border: _selectedArtist != null
+                                  ? Border.all(color: Colors.amber.withValues(alpha: 0.5))
+                                  : null,
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.filter_list, color: Colors.white70, size: 18),
+                                const SizedBox(width: 4),
+                                Text(
+                                  _selectedArtist != null ? TranslateService.translateArtist(_selectedArtist!) : 'すべて',
+                                  style: const TextStyle(color: Colors.white70, fontSize: 14),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
+        ),
+        // Right: Artwork list panel
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+          width: _panelOpen ? 280 : 0,
+          child: _panelOpen
+              ? Container(
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF111111),
+                    border: Border(
+                      left: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 50),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              '作品一覧',
+                              style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+                            ),
+                            Text(
+                              '${_filteredArtworks.length}作品',
+                              style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 12),
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Search field
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        child: TextField(
+                          controller: _searchController,
+                          style: const TextStyle(color: Colors.white, fontSize: 13),
+                          decoration: InputDecoration(
+                            hintText: '検索...',
+                            hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.3), fontSize: 13),
+                            prefixIcon: Icon(Icons.search, color: Colors.white.withValues(alpha: 0.3), size: 18),
+                            suffixIcon: _searchController.text.isNotEmpty
+                                ? MouseRegion(
+                                    cursor: SystemMouseCursors.click,
+                                    child: GestureDetector(
+                                      onTap: () {
+                                        _searchController.clear();
+                                        _searchArtworks('');
+                                      },
+                                      child: Icon(Icons.clear, color: Colors.white.withValues(alpha: 0.3), size: 16),
+                                    ),
+                                  )
+                                : null,
+                            filled: true,
+                            fillColor: Colors.white.withValues(alpha: 0.06),
+                            contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: BorderSide.none,
+                            ),
+                          ),
+                          onChanged: _searchArtworks,
+                        ),
+                      ),
+                      Divider(color: Colors.white.withValues(alpha: 0.08), height: 1),
+                      Expanded(
+                        child: ListView.builder(
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          itemCount: _filteredArtworks.length,
+                          itemBuilder: (context, index) {
+                            final w = _filteredArtworks[index];
+                            final isSelected = _currentPage < _artworks.length && w.id == _artworks[_currentPage].id;
+                            final jaTitle = _translatedTitles[w.id];
+                            final jaArtist = TranslateService.translateArtist(w.artist);
+
+                            return MouseRegion(
+                              cursor: SystemMouseCursors.click,
+                              child: GestureDetector(
+                              onTap: () => _selectArtwork(w),
+                              child: Container(
+                                margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: isSelected
+                                      ? Colors.amber.withValues(alpha: 0.12)
+                                      : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: isSelected
+                                      ? Border.all(color: Colors.amber.withValues(alpha: 0.3))
+                                      : null,
+                                ),
+                                child: Row(
+                                  children: [
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(6),
+                                      child: w.imageUrl != null
+                                          ? CachedNetworkImage(
+                                              imageUrl: w.imageUrl!,
+                                              width: 44,
+                                              height: 44,
+                                              fit: BoxFit.cover,
+                                              errorWidget: (context, url, error) => Container(
+                                                width: 44, height: 44,
+                                                color: Colors.grey[900],
+                                              ),
+                                            )
+                                          : Container(
+                                              width: 44, height: 44,
+                                              color: Colors.grey[900],
+                                            ),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            jaTitle ?? w.title,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              color: isSelected ? Colors.amber : Colors.white,
+                                              fontSize: 12,
+                                              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            jaArtist,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(color: Colors.white.withValues(alpha: 0.35), fontSize: 10),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    if (isSelected)
+                                      Icon(Icons.play_arrow, color: Colors.amber.withValues(alpha: 0.6), size: 16),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              : const SizedBox.shrink(),
         ),
       ],
     );
@@ -214,30 +408,18 @@ class _GalleryScreenState extends State<GalleryScreen> {
     final isFav = _favoriteIds.contains(artwork.id);
     final translatedTitle = _translatedTitles[artwork.id];
 
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => DetailScreen(artwork: artwork)),
-        );
-      },
-      child: Stack(
+    return Stack(
         fit: StackFit.expand,
         children: [
           if (artwork.imageUrl != null)
             InteractiveViewer(
               minScale: 1.0,
               maxScale: 5.0,
-              child: Image.network(
-                artwork.imageUrl!,
+              child: CachedNetworkImage(
+                imageUrl: artwork.imageUrl!,
                 fit: BoxFit.contain,
-                loadingBuilder: (context, child, progress) {
-                  if (progress == null) return child;
-                  return const Center(child: CircularProgressIndicator());
-                },
-                errorBuilder: (context, error, stack) {
-                  return const Center(child: Icon(Icons.broken_image, color: Colors.white54, size: 64));
-                },
+                placeholder: (context, url) => const Center(child: CircularProgressIndicator()),
+                errorWidget: (context, url, error) => const Center(child: Icon(Icons.broken_image, color: Colors.white54, size: 64)),
               ),
             ),
           Container(
@@ -256,8 +438,8 @@ class _GalleryScreenState extends State<GalleryScreen> {
           ),
           // Right side buttons
           Positioned(
-            right: 16,
-            bottom: 140,
+            right: 48,
+            bottom: 120,
             child: Column(
               children: [
                 _sideButton(
@@ -266,7 +448,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
                   label: isFav ? '保存済' : '保存',
                   onTap: () => _toggleFavorite(artwork.id),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 24),
                 _sideButton(
                   icon: Icons.share_outlined,
                   color: Colors.white,
@@ -281,16 +463,18 @@ class _GalleryScreenState extends State<GalleryScreen> {
                     );
                   },
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 24),
                 _sideButton(
                   icon: Icons.info_outline,
                   color: Colors.white,
                   label: '詳細',
-                  onTap: () {
-                    Navigator.push(
+                  onTap: () async {
+                    await Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => DetailScreen(artwork: artwork)),
+                      MaterialPageRoute(fullscreenDialog: true, builder: (_) => DetailScreen(artwork: artwork)),
                     );
+                    final favIds = await FirestoreService.getFavoriteIds();
+                    if (mounted) setState(() => _favoriteIds = favIds);
                   },
                 ),
               ],
@@ -298,37 +482,60 @@ class _GalleryScreenState extends State<GalleryScreen> {
           ),
           // Bottom info
           Positioned(
-            bottom: 40,
+            bottom: 24,
             left: 24,
-            right: 70,
+            right: 100,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (translatedTitle != null) ...[
                   Text(
                     translatedTitle,
-                    style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold, height: 1.2),
+                    style: TextStyle(color: Colors.white, fontSize: _panelOpen ? 16 : 20, fontWeight: FontWeight.bold, height: 1.2),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 2),
                   Text(
                     artwork.title,
-                    style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 12, fontStyle: FontStyle.italic),
+                    style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: _panelOpen ? 10 : 12, fontStyle: FontStyle.italic),
                   ),
                 ] else ...[
                   Text(
                     artwork.title,
-                    style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold, height: 1.2),
+                    style: TextStyle(color: Colors.white, fontSize: _panelOpen ? 16 : 20, fontWeight: FontWeight.bold, height: 1.2),
                   ),
                 ],
                 const SizedBox(height: 6),
                 Text(
                   '${TranslateService.translateArtist(artwork.artist)}  •  ${artwork.date}',
-                  style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 14),
+                  style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: _panelOpen ? 11 : 13),
                 ),
               ],
             ),
           ),
         ],
+    );
+  }
+
+  Widget _iconButton({
+    required IconData icon,
+    bool isActive = false,
+    required VoidCallback onTap,
+  }) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: isActive
+                ? Colors.amber.withValues(alpha: 0.25)
+                : Colors.black.withValues(alpha: 0.5),
+            shape: BoxShape.circle,
+            border: isActive ? Border.all(color: Colors.amber.withValues(alpha: 0.5)) : null,
+          ),
+          child: Icon(icon, color: Colors.white70, size: 22),
+        ),
       ),
     );
   }
@@ -339,14 +546,24 @@ class _GalleryScreenState extends State<GalleryScreen> {
     required String label,
     required VoidCallback onTap,
   }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Column(
-        children: [
-          Icon(icon, color: color, size: 32),
-          const SizedBox(height: 4),
-          Text(label, style: const TextStyle(color: Colors.white70, fontSize: 11)),
-        ],
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.4),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: color, size: 28),
+            ),
+            const SizedBox(height: 6),
+            Text(label, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+          ],
+        ),
       ),
     );
   }
@@ -354,6 +571,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
   @override
   void dispose() {
     _pageController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 }

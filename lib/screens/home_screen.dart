@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../models/artwork.dart';
 import '../services/art_api.dart';
+import '../services/firestore_service.dart';
 import '../services/translate_service.dart';
+import 'detail_screen.dart';
 import 'gallery_screen.dart';
 import 'favorites_screen.dart';
 import 'gacha_screen.dart';
@@ -20,6 +23,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
   String? _translatedTitle;
   String? _translatedDescription;
+  bool _isFavorite = false;
 
   @override
   void initState() {
@@ -29,7 +33,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _loadTodayArtwork() async {
     try {
-      final works = await ArtApi.fetchImpressionistWorks();
+      final works = await ArtApi.fetchImpressionistWorks(limit: 100);
       if (works.isNotEmpty) {
         final dayIndex = DateTime.now().day % works.length;
         setState(() {
@@ -37,6 +41,8 @@ class _HomeScreenState extends State<HomeScreen> {
           _loading = false;
         });
         _translateArtwork(works[dayIndex]);
+        final fav = await FirestoreService.isFavorite(works[dayIndex].id);
+        if (mounted) setState(() => _isFavorite = fav);
       }
     } catch (e) {
       setState(() {
@@ -93,124 +99,192 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     final artwork = _todayArtwork!;
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        if (artwork.imageUrl != null)
-          Image.network(
-            artwork.imageUrl!,
-            fit: BoxFit.cover,
-            loadingBuilder: (context, child, progress) {
-              if (progress == null) return child;
-              return const Center(child: CircularProgressIndicator());
-            },
-            errorBuilder: (context, error, stack) {
-              return const Center(child: Icon(Icons.broken_image, color: Colors.white54, size: 64));
-            },
-          ),
-        Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Colors.transparent,
-                Colors.black.withValues(alpha: 0.3),
-                Colors.black.withValues(alpha: 0.85),
-              ],
-              stops: const [0.3, 0.6, 1.0],
+
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: () async {
+          await Navigator.push(
+            context,
+            MaterialPageRoute(fullscreenDialog: true, builder: (_) => DetailScreen(artwork: artwork)),
+          );
+          final fav = await FirestoreService.isFavorite(artwork.id);
+          if (mounted) setState(() => _isFavorite = fav);
+        },
+        child: Stack(
+        fit: StackFit.expand,
+        children: [
+          if (artwork.imageUrl != null)
+            CachedNetworkImage(
+              imageUrl: artwork.imageUrl!,
+              fit: BoxFit.cover,
+              alignment: Alignment.topCenter,
+              placeholder: (context, url) => const Center(child: CircularProgressIndicator()),
+              errorWidget: (context, url, error) => const Center(child: Icon(Icons.broken_image, color: Colors.white54, size: 64)),
             ),
-          ),
-        ),
-        Positioned(
-          top: 60,
-          left: 24,
-          right: 24,
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.palette, color: Colors.white70, size: 16),
-                    SizedBox(width: 6),
-                    Text("今日の名画",
-                        style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w500)),
+          // Gradient overlay
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: 350,
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.transparent,
+                    Colors.black.withValues(alpha: 0.85),
                   ],
                 ),
               ),
-            ],
+            ),
           ),
-        ),
-        Positioned(
-          bottom: 100,
-          left: 24,
-          right: 24,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (_translatedTitle != null) ...[
-                Text(
-                  _translatedTitle!,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    height: 1.2,
+          // Top bar
+          Positioned(
+            top: 50,
+            left: 16,
+            right: 16,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.palette, color: Colors.white70, size: 16),
+                      SizedBox(width: 6),
+                      Text("今日の名画",
+                          style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w500)),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  artwork.title,
-                  style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 14, fontStyle: FontStyle.italic),
+                _iconButton(
+                  icon: _isFavorite ? Icons.favorite : Icons.favorite_outline,
+                  color: _isFavorite ? Colors.redAccent : Colors.white70,
+                  onTap: () async {
+                    final result = await FirestoreService.toggleFavorite(artwork.id);
+                    setState(() => _isFavorite = result);
+                  },
                 ),
-              ] else ...[
+              ],
+            ),
+          ),
+          // Bottom info
+          Positioned(
+            bottom: 80,
+            left: 16,
+            right: 16,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (_translatedTitle != null) ...[
+                  Text(
+                    _translatedTitle!,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      height: 1.2,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    artwork.title,
+                    style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 14, fontStyle: FontStyle.italic),
+                  ),
+                ] else ...[
+                  Text(
+                    artwork.title,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      height: 1.2,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 6),
                 Text(
-                  artwork.title,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    height: 1.2,
+                  '${TranslateService.translateArtist(artwork.artist)}  •  ${artwork.date}',
+                  style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 16),
+                ),
+                if (_translatedDescription != null) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    _translatedDescription!,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 14, height: 1.5),
+                  ),
+                ] else if (artwork.description != null) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    artwork.description!,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 14, height: 1.5),
+                  ),
+                ],
+                const SizedBox(height: 16),
+                Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '詳細を見る',
+                          style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 14),
+                        ),
+                        const SizedBox(width: 4),
+                        Icon(Icons.arrow_forward_ios, color: Colors.white.withValues(alpha: 0.5), size: 12),
+                      ],
+                    ),
                   ),
                 ),
               ],
-              const SizedBox(height: 8),
-              Text(
-                TranslateService.translateArtist(artwork.artist),
-                style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 18),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                artwork.date,
-                style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 14),
-              ),
-              if (_translatedDescription != null) ...[
-                const SizedBox(height: 16),
-                Text(
-                  _translatedDescription!,
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 14, height: 1.5),
-                ),
-              ] else if (artwork.description != null) ...[
-                const SizedBox(height: 16),
-                Text(
-                  artwork.description!,
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 14, height: 1.5),
-                ),
-              ],
-            ],
+            ),
           ),
+        ],
+      ),
+      ),
+    );
+  }
+
+  Widget _iconButton({
+    required IconData icon,
+    Color? color,
+    bool isActive = false,
+    required VoidCallback onTap,
+  }) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: isActive
+                ? Colors.amber.withValues(alpha: 0.25)
+                : Colors.black.withValues(alpha: 0.4),
+            shape: BoxShape.circle,
+            border: isActive ? Border.all(color: Colors.amber.withValues(alpha: 0.5)) : null,
+          ),
+          child: Icon(icon, color: color ?? Colors.white70, size: 20),
         ),
-      ],
+      ),
     );
   }
 }

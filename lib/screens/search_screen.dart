@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../models/artwork.dart';
 import '../services/art_api.dart';
 import '../services/translate_service.dart';
@@ -120,12 +121,12 @@ class _SearchScreenState extends State<SearchScreen> {
                       leading: ClipRRect(
                         borderRadius: BorderRadius.circular(8),
                         child: artwork.imageUrl != null
-                            ? Image.network(
-                                artwork.imageUrl!,
+                            ? CachedNetworkImage(
+                                imageUrl: artwork.imageUrl!,
                                 width: 60,
                                 height: 60,
                                 fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => Container(
+                                errorWidget: (context, url, error) => Container(
                                   width: 60,
                                   height: 60,
                                   color: Colors.grey[900],
@@ -151,7 +152,7 @@ class _SearchScreenState extends State<SearchScreen> {
                       onTap: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (_) => DetailScreen(artwork: artwork)),
+                          MaterialPageRoute(fullscreenDialog: true, builder: (_) => DetailScreen(artwork: artwork)),
                         );
                       },
                     );
