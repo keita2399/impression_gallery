@@ -7,6 +7,7 @@ class ArtApi {
   static const _fields = 'id,title,artist_title,date_display,image_id,thumbnail,style_titles';
 
   static const impressionistArtists = [
+    // 印象派
     'Claude Monet',
     'Pierre-Auguste Renoir',
     'Edgar Degas',
@@ -14,6 +15,15 @@ class ArtApi {
     'Alfred Sisley',
     'Berthe Morisot',
     'Gustave Caillebotte',
+    // ポスト印象派
+    'Vincent van Gogh',
+    'Paul Cézanne',
+    'Paul Gauguin',
+    'Georges Seurat',
+    'Henri de Toulouse-Lautrec',
+    'Paul Signac',
+    'Édouard Manet',
+    'Mary Cassatt',
   ];
 
   static Future<List<Artwork>> fetchImpressionistWorks({
@@ -39,7 +49,10 @@ class ArtApi {
 
     final response = await http.post(
       url,
-      headers: {'Content-Type': 'application/json'},
+      headers: {
+        'Content-Type': 'application/json',
+        'User-Agent': 'ImpressionGallery/1.0 (Flutter App)',
+      },
       body: body,
     );
 
@@ -59,7 +72,9 @@ class ArtApi {
   static Future<Artwork?> fetchArtworkDetail(int id) async {
     final url = Uri.parse('$_baseUrl/artworks/$id?fields=$_fields,description,publication_history,exhibition_history,place_of_origin,medium_display,dimensions,credit_line');
 
-    final response = await http.get(url);
+    final response = await http.get(url, headers: {
+      'User-Agent': 'ImpressionGallery/1.0 (Flutter App)',
+    });
     if (response.statusCode != 200) return null;
 
     final data = jsonDecode(response.body);

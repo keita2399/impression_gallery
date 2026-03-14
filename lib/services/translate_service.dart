@@ -5,6 +5,7 @@ class TranslateService {
   static final Map<String, String> _cache = {};
 
   static const Map<String, String> artistNames = {
+    // 印象派
     'Claude Monet': 'クロード・モネ',
     'Pierre-Auguste Renoir': 'ピエール＝オーギュスト・ルノワール',
     'Edgar Degas': 'エドガー・ドガ',
@@ -12,6 +13,15 @@ class TranslateService {
     'Alfred Sisley': 'アルフレッド・シスレー',
     'Berthe Morisot': 'ベルト・モリゾ',
     'Gustave Caillebotte': 'ギュスターヴ・カイユボット',
+    // ポスト印象派
+    'Vincent van Gogh': 'フィンセント・ファン・ゴッホ',
+    'Paul Cézanne': 'ポール・セザンヌ',
+    'Paul Gauguin': 'ポール・ゴーギャン',
+    'Georges Seurat': 'ジョルジュ・スーラ',
+    'Henri de Toulouse-Lautrec': 'アンリ・ド・トゥールーズ＝ロートレック',
+    'Paul Signac': 'ポール・シニャック',
+    'Édouard Manet': 'エドゥアール・マネ',
+    'Mary Cassatt': 'メアリー・カサット',
   };
 
   static String translateArtist(String name) {
