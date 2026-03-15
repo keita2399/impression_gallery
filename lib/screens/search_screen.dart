@@ -126,6 +126,7 @@ class _SearchScreenState extends State<SearchScreen> {
                                 width: 60,
                                 height: 60,
                                 fit: BoxFit.cover,
+                                httpHeaders: ArtApi.imageHeaders,
                                 errorWidget: (context, url, error) => Container(
                                   width: 60,
                                   height: 60,

@@ -270,6 +270,7 @@ class _GachaScreenState extends State<GachaScreen> with SingleTickerProviderStat
                       ? CachedNetworkImage(
                           imageUrl: artwork.imageUrl!,
                           fit: BoxFit.contain,
+                          httpHeaders: ArtApi.imageHeaders,
                           placeholder: (context, url) => const SizedBox(
                             height: 200,
                             child: Center(child: CircularProgressIndicator()),
@@ -364,6 +365,7 @@ class _GachaScreenState extends State<GachaScreen> with SingleTickerProviderStat
                   CachedNetworkImage(
                     imageUrl: artwork.imageUrl!,
                     fit: BoxFit.cover,
+                    httpHeaders: ArtApi.imageHeaders,
                     placeholder: (context, url) => Container(color: Colors.grey[900]),
                     errorWidget: (context, url, error) => Container(
                       color: Colors.grey[900],

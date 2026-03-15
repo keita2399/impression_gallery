@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:share_plus/share_plus.dart';
 import '../models/artwork.dart';
 import '../services/art_api.dart';
 import '../services/translate_service.dart';
+import '../widgets/light_simulation_widget.dart';
 
 class DetailScreen extends StatefulWidget {
   final Artwork artwork;
@@ -26,6 +28,7 @@ class _DetailScreenState extends State<DetailScreen> {
   final TransformationController _zoomController = TransformationController();
   double _currentScale = 1.0;
   bool _fullscreenZoom = false;
+  bool _lightSimulation = false;
 
   @override
   void initState() {
@@ -142,6 +145,14 @@ class _DetailScreenState extends State<DetailScreen> {
     final jaArtist = TranslateService.translateArtist(artwork.artist);
     final isMobile = _isMobile;
 
+    // Light simulation mode (native only)
+    if (_lightSimulation && artwork.imageUrl != null) {
+      return LightSimulationWidget(
+        imageUrl: artwork.imageUrl!,
+        onClose: () => setState(() => _lightSimulation = false),
+      );
+    }
+
     if (_fullscreenZoom) {
       return Scaffold(
         backgroundColor: Colors.black,
@@ -163,6 +174,7 @@ class _DetailScreenState extends State<DetailScreen> {
                   child: CachedNetworkImage(
                     imageUrl: artwork.imageUrlHigh ?? artwork.imageUrl!,
                     fit: BoxFit.contain,
+                    httpHeaders: ArtApi.imageHeaders,
                     placeholder: (context, url) => const Center(child: CircularProgressIndicator()),
                     errorWidget: (context, url, error) => const Center(child: Icon(Icons.broken_image, color: Colors.white54, size: 64)),
                   ),
@@ -283,6 +295,7 @@ class _DetailScreenState extends State<DetailScreen> {
                             child: CachedNetworkImage(
                               imageUrl: artwork.imageUrlHigh ?? artwork.imageUrl!,
                               fit: BoxFit.contain,
+                              httpHeaders: ArtApi.imageHeaders,
                               placeholder: (context, url) => const Center(child: CircularProgressIndicator()),
                               errorWidget: (context, url, error) => const Center(child: Icon(Icons.broken_image, color: Colors.white54, size: 64)),
                             ),
@@ -427,6 +440,13 @@ class _DetailScreenState extends State<DetailScreen> {
                       compact: true,
                     ),
                     _actionButton(icon: Icons.zoom_in, label: '拡大', onTap: _enterZoom, compact: true),
+                    if (!kIsWeb)
+                      _actionButton(
+                        icon: Icons.wb_sunny_outlined,
+                        label: '光',
+                        onTap: () => setState(() => _lightSimulation = true),
+                        compact: true,
+                      ),
                   ],
                 ),
               ),
@@ -462,6 +482,14 @@ class _DetailScreenState extends State<DetailScreen> {
                     label: '拡大',
                     onTap: _enterZoom,
                   ),
+                  if (!kIsWeb) ...[
+                    const SizedBox(height: 16),
+                    _actionButton(
+                      icon: Icons.wb_sunny_outlined,
+                      label: '光',
+                      onTap: () => setState(() => _lightSimulation = true),
+                    ),
+                  ],
                 ],
               ),
             ),

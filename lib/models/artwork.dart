@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
+
 class Artwork {
   final int id;
   final String title;
@@ -51,13 +53,21 @@ class Artwork {
     );
   }
 
+  static const _proxyBase = 'https://impressionist-bot.vercel.app/api/image';
+
   String? get imageUrl {
     if (imageId == null) return null;
-    return 'https://www.artic.edu/iiif/2/$imageId/full/843,/0/default.jpg';
+    if (kIsWeb) {
+      return 'https://www.artic.edu/iiif/2/$imageId/full/843,/0/default.jpg';
+    }
+    return '$_proxyBase?id=$imageId&w=843';
   }
 
   String? get imageUrlHigh {
     if (imageId == null) return null;
-    return 'https://www.artic.edu/iiif/2/$imageId/full/1686,/0/default.jpg';
+    if (kIsWeb) {
+      return 'https://www.artic.edu/iiif/2/$imageId/full/1686,/0/default.jpg';
+    }
+    return '$_proxyBase?id=$imageId&w=1686';
   }
 }

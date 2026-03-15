@@ -119,6 +119,7 @@ class _HomeScreenState extends State<HomeScreen> {
               imageUrl: artwork.imageUrl!,
               fit: BoxFit.cover,
               alignment: Alignment.topCenter,
+              httpHeaders: ArtApi.imageHeaders,
               placeholder: (context, url) => const Center(child: CircularProgressIndicator()),
               errorWidget: (context, url, error) => const Center(child: Icon(Icons.broken_image, color: Colors.white54, size: 64)),
             ),

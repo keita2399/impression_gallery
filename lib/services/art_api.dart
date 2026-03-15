@@ -6,6 +6,11 @@ class ArtApi {
   static const _baseUrl = 'https://api.artic.edu/api/v1';
   static const _fields = 'id,title,artist_title,date_display,image_id,thumbnail,style_titles';
 
+  /// IIIF画像サーバーのCloudflare制限を回避するためのヘッダー
+  static const imageHeaders = <String, String>{
+    'User-Agent': 'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
+  };
+
   static const impressionistArtists = [
     // 印象派
     'Claude Monet',

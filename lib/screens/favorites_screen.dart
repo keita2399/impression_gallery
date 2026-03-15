@@ -145,6 +145,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                   CachedNetworkImage(
                     imageUrl: artwork.imageUrl!,
                     fit: BoxFit.cover,
+                    httpHeaders: ArtApi.imageHeaders,
                     placeholder: (context, url) => Container(color: Colors.grey[900]),
                     errorWidget: (context, url, error) => Container(
                       color: Colors.grey[900],
