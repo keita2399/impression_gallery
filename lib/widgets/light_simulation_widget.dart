@@ -359,10 +359,13 @@ class _LightSimulationWidgetState extends State<LightSimulationWidget>
             Positioned(
               top: MediaQuery.of(context).padding.top + 8,
               right: 16,
-              child: _controlButton(
-                icon: Icons.close,
-                label: '戻る',
-                onTap: widget.onClose,
+              child: GestureDetector(
+                onTapDown: (_) {},
+                child: _controlButton(
+                  icon: Icons.close,
+                  label: '戻る',
+                  onTap: widget.onClose,
+                ),
               ),
             ),
 
@@ -371,30 +374,33 @@ class _LightSimulationWidgetState extends State<LightSimulationWidget>
               Positioned(
                 top: MediaQuery.of(context).padding.top + 8,
                 left: 16,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _controlButton(
-                      icon: Icons.tune,
-                      label: '調整',
-                      onTap: () => setState(() => _showControls = !_showControls),
-                    ),
-                    if (_sensorAvailable) ...[
-                      const SizedBox(width: 8),
+                child: GestureDetector(
+                  onTapDown: (_) {},
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
                       _controlButton(
-                        icon: _sensorMode ? Icons.screen_rotation : Icons.touch_app,
-                        label: _sensorMode ? '傾き操作中' : '傾き操作',
-                        onTap: () {
-                          if (_sensorMode) {
-                            _stopSensorMode();
-                            setState(() {});
-                          } else {
-                            _startSensorMode();
-                          }
-                        },
+                        icon: Icons.tune,
+                        label: '調整',
+                        onTap: () => setState(() => _showControls = !_showControls),
                       ),
+                      if (_sensorAvailable) ...[
+                        const SizedBox(width: 8),
+                        _controlButton(
+                          icon: _sensorMode ? Icons.screen_rotation : Icons.touch_app,
+                          label: _sensorMode ? '傾き操作中' : '傾き操作',
+                          onTap: () {
+                            if (_sensorMode) {
+                              _stopSensorMode();
+                              setState(() {});
+                            } else {
+                              _startSensorMode();
+                            }
+                          },
+                        ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
               ),
 
@@ -404,7 +410,10 @@ class _LightSimulationWidgetState extends State<LightSimulationWidget>
                 bottom: 20,
                 left: 24,
                 right: 24,
-                child: Container(
+                child: GestureDetector(
+                  onTapDown: (_) {},
+                  onPanUpdate: (_) {},
+                  child: Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: Colors.black.withValues(alpha: 0.75),
@@ -480,6 +489,7 @@ class _LightSimulationWidgetState extends State<LightSimulationWidget>
                       ),
                     ],
                   ),
+                ),
                 ),
               ),
           ],
