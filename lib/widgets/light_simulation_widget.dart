@@ -3,6 +3,7 @@ import 'dart:math';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:sensors_plus/sensors_plus.dart';
 import '../services/art_api.dart';
 
 /// Light simulation widget using Fragment Shader
@@ -42,10 +43,70 @@ class _LightSimulationWidgetState extends State<LightSimulationWidget>
   // Intro fade animation
   AnimationController? _introFadeController;
 
+  // Sensor mode
+  bool _sensorMode = false;
+  bool _sensorAvailable = false;
+  StreamSubscription<AccelerometerEvent>? _sensorSub;
+  // Low-pass filtered sensor values
+  double _filteredX = 0.0;
+  double _filteredY = 0.0;
+
   @override
   void initState() {
     super.initState();
     _loadResources();
+    _checkSensor();
+  }
+
+  Future<void> _checkSensor() async {
+    // Check if accelerometer is available
+    try {
+      final sub = accelerometerEventStream().listen((_) {});
+      await Future.delayed(const Duration(milliseconds: 200));
+      await sub.cancel();
+      if (mounted) setState(() => _sensorAvailable = true);
+    } catch (_) {
+      // Sensor not available (e.g. Kindle Fire without accelerometer)
+    }
+  }
+
+  void _startSensorMode() {
+    if (!_sensorAvailable) return;
+    _sensorMode = true;
+    _userTouched = true;
+    _demoController?.stop();
+    setState(() => _showIntro = false);
+
+    _sensorSub = accelerometerEventStream(
+      samplingPeriod: const Duration(milliseconds: 30),
+    ).listen((event) {
+      if (!mounted || !_sensorMode) return;
+      // Accelerometer: x = left/right tilt, y = forward/back tilt
+      // When device is flat: x~0, y~0, z~9.8
+      // Tilt right: x becomes negative, Tilt left: x becomes positive
+      // Tilt forward (top away): y becomes positive
+      // Map to 0..1 range with sensitivity. atan2 gives stable angle.
+      const alpha = 0.15; // Low-pass filter strength
+      _filteredX = _filteredX * (1 - alpha) + event.x * alpha;
+      _filteredY = _filteredY * (1 - alpha) + event.y * alpha;
+
+      // Convert to normalized position (0-1)
+      // x: -9.8..+9.8 → map ±4 range to 0..1
+      // Negate x so tilting right moves light right
+      final nx = (0.5 - _filteredX / 8.0).clamp(0.0, 1.0);
+      // y: tilting forward (positive y) moves light up
+      final ny = (0.5 - _filteredY / 8.0).clamp(0.0, 1.0);
+
+      setState(() {
+        _lightPos = Offset(nx, ny);
+      });
+    });
+  }
+
+  void _stopSensorMode() {
+    _sensorSub?.cancel();
+    _sensorSub = null;
+    _sensorMode = false;
   }
 
   void _startDemo() {
@@ -81,6 +142,10 @@ class _LightSimulationWidgetState extends State<LightSimulationWidget>
   }
 
   void _onUserTouch(Offset localPos, Size boxSize) {
+    if (_sensorMode) {
+      _stopSensorMode();
+      setState(() {});
+    }
     if (!_userTouched) {
       _userTouched = true;
       _demoController?.stop();
@@ -136,6 +201,7 @@ class _LightSimulationWidgetState extends State<LightSimulationWidget>
 
   @override
   void dispose() {
+    _sensorSub?.cancel();
     _shader?.dispose();
     _image?.dispose();
     _demoController?.dispose();
@@ -259,7 +325,9 @@ class _LightSimulationWidgetState extends State<LightSimulationWidget>
                                 color: Colors.white.withValues(alpha: 0.8), size: 48),
                             const SizedBox(height: 16),
                             Text(
-                              '画面をなぞると\n光の位置が変わります',
+                              _sensorAvailable
+                                  ? '画面をなぞると光の位置が変わります\n端末を傾けても操作できます'
+                                  : '画面をなぞると\n光の位置が変わります',
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 color: Colors.white.withValues(alpha: 0.9),
@@ -292,10 +360,30 @@ class _LightSimulationWidgetState extends State<LightSimulationWidget>
               Positioned(
                 top: MediaQuery.of(context).padding.top + 8,
                 left: 16,
-                child: _controlButton(
-                  icon: _showControls ? Icons.tune : Icons.tune,
-                  label: '調整',
-                  onTap: () => setState(() => _showControls = !_showControls),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _controlButton(
+                      icon: Icons.tune,
+                      label: '調整',
+                      onTap: () => setState(() => _showControls = !_showControls),
+                    ),
+                    if (_sensorAvailable) ...[
+                      const SizedBox(width: 8),
+                      _controlButton(
+                        icon: _sensorMode ? Icons.screen_rotation : Icons.touch_app,
+                        label: _sensorMode ? '傾き操作中' : '傾き操作',
+                        onTap: () {
+                          if (_sensorMode) {
+                            _stopSensorMode();
+                            setState(() {});
+                          } else {
+                            _startSensorMode();
+                          }
+                        },
+                      ),
+                    ],
+                  ],
                 ),
               ),
 
