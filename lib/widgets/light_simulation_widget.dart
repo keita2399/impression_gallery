@@ -3,6 +3,7 @@ import 'dart:math';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/services.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 import '../services/art_api.dart';
 
@@ -69,14 +70,19 @@ class _LightSimulationWidgetState extends State<LightSimulationWidget>
   }
 
   Future<void> _checkSensor() async {
-    // Check if accelerometer is available
     try {
-      final sub = accelerometerEventStream().listen((_) {});
-      await Future.delayed(const Duration(milliseconds: 200));
+      bool gotData = false;
+      final sub = accelerometerEventStream().listen((event) {
+        // Verify we get actual non-zero data (not just zeros)
+        if (event.x.abs() > 0.1 || event.y.abs() > 0.1 || event.z.abs() > 0.1) {
+          gotData = true;
+        }
+      });
+      await Future.delayed(const Duration(milliseconds: 500));
       await sub.cancel();
-      if (mounted) setState(() => _sensorAvailable = true);
+      if (mounted && gotData) setState(() => _sensorAvailable = true);
     } catch (_) {
-      // Sensor not available (e.g. Kindle Fire without accelerometer)
+      // Sensor not available
     }
   }
 
@@ -85,26 +91,24 @@ class _LightSimulationWidgetState extends State<LightSimulationWidget>
     _sensorMode = true;
     _userTouched = true;
     _demoController?.stop();
+    // Lock screen orientation so tilting doesn't rotate the screen
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+    ]);
     setState(() => _showIntro = false);
 
     _sensorSub = accelerometerEventStream(
       samplingPeriod: const Duration(milliseconds: 30),
     ).listen((event) {
       if (!mounted || !_sensorMode) return;
-      // Accelerometer: x = left/right tilt, y = forward/back tilt
-      // When device is flat: x~0, y~0, z~9.8
-      // Tilt right: x becomes negative, Tilt left: x becomes positive
-      // Tilt forward (top away): y becomes positive
-      // Map to 0..1 range with sensitivity. atan2 gives stable angle.
-      const alpha = 0.15; // Low-pass filter strength
+      const alpha = 0.15;
       _filteredX = _filteredX * (1 - alpha) + event.x * alpha;
       _filteredY = _filteredY * (1 - alpha) + event.y * alpha;
 
       // Convert to normalized position (0-1)
-      // x: -9.8..+9.8 → map ±4 range to 0..1
       // Negate x so tilting right moves light right
       final nx = (0.5 - _filteredX / 8.0).clamp(0.0, 1.0);
-      // y: tilting forward (positive y) moves light up
+      // Tilting forward (positive y) moves light up
       final ny = (0.5 - _filteredY / 8.0).clamp(0.0, 1.0);
 
       setState(() {
@@ -117,10 +121,11 @@ class _LightSimulationWidgetState extends State<LightSimulationWidget>
     _sensorSub?.cancel();
     _sensorSub = null;
     _sensorMode = false;
+    // Restore screen orientation
+    SystemChrome.setPreferredOrientations([]);
   }
 
   void _startDemo() {
-    // Auto-demo: light moves in a gentle circle to show the effect
     _demoController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 4),
@@ -137,7 +142,6 @@ class _LightSimulationWidgetState extends State<LightSimulationWidget>
       });
     _demoController!.repeat();
 
-    // Fade out intro after 3 seconds
     _introFadeController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 500),
@@ -171,11 +175,9 @@ class _LightSimulationWidgetState extends State<LightSimulationWidget>
 
   Future<void> _loadResources() async {
     try {
-      // Load shader
       final program = await ui.FragmentProgram.fromAsset('shaders/lighting.frag');
       _shader = program.fragmentShader();
 
-      // Load image as dart:ui Image
       final completer = Completer<ui.Image>();
       final imageProvider = NetworkImage(widget.imageUrl, headers: ArtApi.imageHeaders);
       final stream = imageProvider.resolve(ImageConfiguration.empty);
@@ -212,6 +214,9 @@ class _LightSimulationWidgetState extends State<LightSimulationWidget>
   @override
   void dispose() {
     _sensorSub?.cancel();
+    if (_sensorMode) {
+      SystemChrome.setPreferredOrientations([]);
+    }
     _shader?.dispose();
     _image?.dispose();
     _demoController?.dispose();
@@ -269,25 +274,26 @@ class _LightSimulationWidgetState extends State<LightSimulationWidget>
 
     return Scaffold(
       backgroundColor: Colors.black,
-      body: GestureDetector(
-        onTapDown: (details) {
-          final box = context.findRenderObject() as RenderBox;
-          _onUserTouch(details.localPosition, box.size);
-        },
-        onPanUpdate: (details) {
-          final box = context.findRenderObject() as RenderBox;
-          _onUserTouch(details.localPosition, box.size);
-        },
-        onTap: () {
-          if (_userTouched && !_showControls) {
-            setState(() => _showControls = true);
-          }
-        },
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            // Shader-painted canvas
-            CustomPaint(
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          // Bottom layer: touch handler for light position (canvas area)
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTapDown: (details) {
+              final box = context.findRenderObject() as RenderBox;
+              _onUserTouch(details.localPosition, box.size);
+            },
+            onPanUpdate: (details) {
+              final box = context.findRenderObject() as RenderBox;
+              _onUserTouch(details.localPosition, box.size);
+            },
+            onTap: () {
+              if (_userTouched && !_showControls) {
+                setState(() => _showControls = true);
+              }
+            },
+            child: CustomPaint(
               painter: _LightingPainter(
                 shader: _shader!,
                 image: _image!,
@@ -298,29 +304,31 @@ class _LightSimulationWidgetState extends State<LightSimulationWidget>
                 lightColor: _colorPresets[_colorPresetIndex],
               ),
             ),
+          ),
 
-            // Light position indicator (subtle)
-            Positioned(
-              left: _lightPos.dx * MediaQuery.of(context).size.width - 14,
-              top: _lightPos.dy * MediaQuery.of(context).size.height - 14,
-              child: IgnorePointer(
-                child: Container(
-                  width: 28,
-                  height: 28,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.3),
-                      width: 1,
-                    ),
+          // Light position indicator (subtle)
+          Positioned(
+            left: _lightPos.dx * MediaQuery.of(context).size.width - 14,
+            top: _lightPos.dy * MediaQuery.of(context).size.height - 14,
+            child: IgnorePointer(
+              child: Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.3),
+                    width: 1,
                   ),
                 ),
               ),
             ),
+          ),
 
-            // Intro overlay (shown at start, fades out)
-            if (_showIntro)
-              AnimatedBuilder(
+          // Intro overlay (shown at start, fades out)
+          if (_showIntro)
+            IgnorePointer(
+              child: AnimatedBuilder(
                 animation: _introFadeController ?? const AlwaysStoppedAnimation(0),
                 builder: (context, child) {
                   final opacity = 1.0 - (_introFadeController?.value ?? 0.0);
@@ -354,146 +362,140 @@ class _LightSimulationWidgetState extends State<LightSimulationWidget>
                   );
                 },
               ),
+            ),
 
-            // Close button (always visible)
+          // Close button (always visible)
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 8,
+            right: 16,
+            child: _controlButton(
+              icon: Icons.close,
+              label: '戻る',
+              onTap: widget.onClose,
+            ),
+          ),
+
+          // Settings toggle button + sensor button
+          if (_userTouched)
             Positioned(
               top: MediaQuery.of(context).padding.top + 8,
-              right: 16,
-              child: GestureDetector(
-                onTapDown: (_) {},
-                child: _controlButton(
-                  icon: Icons.close,
-                  label: '戻る',
-                  onTap: widget.onClose,
-                ),
+              left: 16,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _controlButton(
+                    icon: Icons.tune,
+                    label: '調整',
+                    onTap: () => setState(() => _showControls = !_showControls),
+                  ),
+                  if (_sensorAvailable) ...[
+                    const SizedBox(width: 8),
+                    _controlButton(
+                      icon: _sensorMode ? Icons.screen_rotation : Icons.touch_app,
+                      label: _sensorMode ? '傾き操作中' : '傾き操作',
+                      onTap: () {
+                        if (_sensorMode) {
+                          _stopSensorMode();
+                          setState(() {});
+                        } else {
+                          _startSensorMode();
+                        }
+                      },
+                    ),
+                  ],
+                ],
               ),
             ),
 
-            // Settings toggle button
-            if (_userTouched)
-              Positioned(
-                top: MediaQuery.of(context).padding.top + 8,
-                left: 16,
-                child: GestureDetector(
-                  onTapDown: (_) {},
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _controlButton(
-                        icon: Icons.tune,
-                        label: '調整',
-                        onTap: () => setState(() => _showControls = !_showControls),
-                      ),
-                      if (_sensorAvailable) ...[
-                        const SizedBox(width: 8),
-                        _controlButton(
-                          icon: _sensorMode ? Icons.screen_rotation : Icons.touch_app,
-                          label: _sensorMode ? '傾き操作中' : '傾き操作',
-                          onTap: () {
-                            if (_sensorMode) {
-                              _stopSensorMode();
-                              setState(() {});
-                            } else {
-                              _startSensorMode();
-                            }
-                          },
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
+          // Sliders panel
+          if (_showControls && _userTouched)
+            Positioned(
+              bottom: 20,
+              left: 24,
+              right: 24,
+              child: _buildControlPanel(),
+            ),
+        ],
+      ),
+    );
+  }
 
-            // Sliders panel
-            if (_showControls && _userTouched)
-              Positioned(
-                bottom: 20,
-                left: 24,
-                right: 24,
-                child: GestureDetector(
-                  onTapDown: (_) {},
-                  onPanUpdate: (_) {},
-                  child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.75),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Color temperature presets
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: List.generate(_colorPresets.length, (i) {
-                          final preset = _colorPresets[i];
-                          final selected = i == _colorPresetIndex;
-                          return GestureDetector(
-                            onTap: () => setState(() => _colorPresetIndex = i),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Container(
-                                  width: 28,
-                                  height: 28,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: preset.displayColor,
-                                    border: Border.all(
-                                      color: selected ? Colors.white : Colors.white24,
-                                      width: selected ? 2 : 1,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  preset.label,
-                                  style: TextStyle(
-                                    color: selected ? Colors.white : Colors.white38,
-                                    fontSize: 10,
-                                    fontWeight: selected ? FontWeight.bold : FontWeight.normal,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        }),
+  Widget _buildControlPanel() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.75),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Color temperature presets
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: List.generate(_colorPresets.length, (i) {
+              final preset = _colorPresets[i];
+              final selected = i == _colorPresetIndex;
+              return GestureDetector(
+                onTap: () => setState(() => _colorPresetIndex = i),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: preset.displayColor,
+                        border: Border.all(
+                          color: selected ? Colors.white : Colors.white24,
+                          width: selected ? 2 : 1,
+                        ),
                       ),
-                      const SizedBox(height: 12),
-                      _sliderRow(
-                        label: '光の強さ',
-                        icon: Icons.wb_sunny_outlined,
-                        value: _intensity,
-                        min: 0.0,
-                        max: 1.5,
-                        onChanged: (v) => setState(() => _intensity = v),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      preset.label,
+                      style: TextStyle(
+                        color: selected ? Colors.white : Colors.white38,
+                        fontSize: 10,
+                        fontWeight: selected ? FontWeight.bold : FontWeight.normal,
                       ),
-                      const SizedBox(height: 4),
-                      _sliderRow(
-                        label: '光の広がり',
-                        icon: Icons.blur_on,
-                        value: _lightRadius,
-                        min: 0.2,
-                        max: 2.0,
-                        onChanged: (v) => setState(() => _lightRadius = v),
-                      ),
-                      const SizedBox(height: 4),
-                      _sliderRow(
-                        label: '周りの明るさ',
-                        icon: Icons.brightness_low,
-                        value: _ambient,
-                        min: 0.0,
-                        max: 1.0,
-                        onChanged: (v) => setState(() => _ambient = v),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-                ),
-              ),
-          ],
-        ),
+              );
+            }),
+          ),
+          const SizedBox(height: 12),
+          _sliderRow(
+            label: '光の強さ',
+            icon: Icons.wb_sunny_outlined,
+            value: _intensity,
+            min: 0.0,
+            max: 1.5,
+            onChanged: (v) => setState(() => _intensity = v),
+          ),
+          const SizedBox(height: 4),
+          _sliderRow(
+            label: '光の広がり',
+            icon: Icons.blur_on,
+            value: _lightRadius,
+            min: 0.2,
+            max: 2.0,
+            onChanged: (v) => setState(() => _lightRadius = v),
+          ),
+          const SizedBox(height: 4),
+          _sliderRow(
+            label: '周りの明るさ',
+            icon: Icons.brightness_low,
+            value: _ambient,
+            min: 0.0,
+            max: 1.0,
+            onChanged: (v) => setState(() => _ambient = v),
+          ),
+        ],
       ),
     );
   }
@@ -541,24 +543,21 @@ class _LightSimulationWidgetState extends State<LightSimulationWidget>
     required String label,
     required VoidCallback onTap,
   }) {
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.5),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, color: Colors.white, size: 18),
-              const SizedBox(width: 4),
-              Text(label, style: const TextStyle(color: Colors.white70, fontSize: 12)),
-            ],
-          ),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.5),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: Colors.white, size: 18),
+            const SizedBox(width: 4),
+            Text(label, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+          ],
         ),
       ),
     );
@@ -587,7 +586,6 @@ class _LightingPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    // Calculate image display rect (contain mode)
     final imageAspect = image.width / image.height;
     final canvasAspect = size.width / size.height;
 
@@ -604,27 +602,23 @@ class _LightingPainter extends CustomPainter {
       offsetY = 0;
     }
 
-    // Set uniforms
-    shader.setFloat(0, drawWidth);   // uSize.x
-    shader.setFloat(1, drawHeight);  // uSize.y
+    shader.setFloat(0, drawWidth);
+    shader.setFloat(1, drawHeight);
 
-    // Convert light position from full-screen coords to image-local coords
     final localLightX = (lightPos.dx * size.width - offsetX) / drawWidth;
     final localLightY = (lightPos.dy * size.height - offsetY) / drawHeight;
-    shader.setFloat(2, localLightX);  // uLightPos.x
-    shader.setFloat(3, localLightY);  // uLightPos.y
+    shader.setFloat(2, localLightX);
+    shader.setFloat(3, localLightY);
 
-    shader.setFloat(4, lightRadius);  // uLightRadius
-    shader.setFloat(5, ambient);      // uAmbient
-    shader.setFloat(6, intensity);    // uIntensity
-    shader.setFloat(7, lightColor.r); // uLightColor.r
-    shader.setFloat(8, lightColor.g); // uLightColor.g
-    shader.setFloat(9, lightColor.b); // uLightColor.b
+    shader.setFloat(4, lightRadius);
+    shader.setFloat(5, ambient);
+    shader.setFloat(6, intensity);
+    shader.setFloat(7, lightColor.r);
+    shader.setFloat(8, lightColor.g);
+    shader.setFloat(9, lightColor.b);
 
-    // Set image sampler
     shader.setImageSampler(0, image);
 
-    // Draw the shader rect (only where the image is)
     final paint = Paint()..shader = shader;
     canvas.save();
     canvas.translate(offsetX, offsetY);
