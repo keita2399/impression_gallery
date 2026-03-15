@@ -38,6 +38,16 @@ class _LightSimulationWidgetState extends State<LightSimulationWidget>
   bool _showIntro = true;
   bool _userTouched = false;
 
+  // Color temperature presets
+  int _colorPresetIndex = 0;
+  static const _colorPresets = <_ColorPreset>[
+    _ColorPreset('ろうそく',   Color(0xFFFFD2A0), 1.0, 0.95, 0.75),
+    _ColorPreset('暖色',      Color(0xFFFFF0D6), 1.0, 0.95, 0.85),
+    _ColorPreset('自然光',    Color(0xFFFFFFF0), 1.0, 1.0,  0.96),
+    _ColorPreset('昼白色',    Color(0xFFE8F0FF), 0.92, 0.95, 1.0),
+    _ColorPreset('月明かり',  Color(0xFFD0D8FF), 0.85, 0.88, 1.0),
+  ];
+
   // Auto-demo animation
   AnimationController? _demoController;
   // Intro fade animation
@@ -285,6 +295,7 @@ class _LightSimulationWidgetState extends State<LightSimulationWidget>
                 lightRadius: _lightRadius,
                 ambient: _ambient,
                 intensity: _intensity,
+                lightColor: _colorPresets[_colorPresetIndex],
               ),
             ),
 
@@ -403,6 +414,44 @@ class _LightSimulationWidgetState extends State<LightSimulationWidget>
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                      // Color temperature presets
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: List.generate(_colorPresets.length, (i) {
+                          final preset = _colorPresets[i];
+                          final selected = i == _colorPresetIndex;
+                          return GestureDetector(
+                            onTap: () => setState(() => _colorPresetIndex = i),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 28,
+                                  height: 28,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: preset.displayColor,
+                                    border: Border.all(
+                                      color: selected ? Colors.white : Colors.white24,
+                                      width: selected ? 2 : 1,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  preset.label,
+                                  style: TextStyle(
+                                    color: selected ? Colors.white : Colors.white38,
+                                    fontSize: 10,
+                                    fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }),
+                      ),
+                      const SizedBox(height: 12),
                       _sliderRow(
                         label: '光の強さ',
                         icon: Icons.wb_sunny_outlined,
@@ -514,6 +563,7 @@ class _LightingPainter extends CustomPainter {
   final double lightRadius;
   final double ambient;
   final double intensity;
+  final _ColorPreset lightColor;
 
   _LightingPainter({
     required this.shader,
@@ -522,6 +572,7 @@ class _LightingPainter extends CustomPainter {
     required this.lightRadius,
     required this.ambient,
     required this.intensity,
+    required this.lightColor,
   });
 
   @override
@@ -556,6 +607,9 @@ class _LightingPainter extends CustomPainter {
     shader.setFloat(4, lightRadius);  // uLightRadius
     shader.setFloat(5, ambient);      // uAmbient
     shader.setFloat(6, intensity);    // uIntensity
+    shader.setFloat(7, lightColor.r); // uLightColor.r
+    shader.setFloat(8, lightColor.g); // uLightColor.g
+    shader.setFloat(9, lightColor.b); // uLightColor.b
 
     // Set image sampler
     shader.setImageSampler(0, image);
@@ -577,6 +631,14 @@ class _LightingPainter extends CustomPainter {
         lightRadius != oldDelegate.lightRadius ||
         ambient != oldDelegate.ambient ||
         intensity != oldDelegate.intensity ||
+        lightColor != oldDelegate.lightColor ||
         image != oldDelegate.image;
   }
+}
+
+class _ColorPreset {
+  final String label;
+  final Color displayColor;
+  final double r, g, b;
+  const _ColorPreset(this.label, this.displayColor, this.r, this.g, this.b);
 }

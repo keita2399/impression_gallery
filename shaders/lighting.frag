@@ -10,6 +10,7 @@ uniform vec2 uLightPos;      // Light position 0.0~1.0 (float index 2,3)
 uniform float uLightRadius;  // Light reach radius (float index 4)
 uniform float uAmbient;      // Ambient light strength (float index 5)
 uniform float uIntensity;    // Highlight intensity (float index 6)
+uniform vec3 uLightColor;    // Light color RGB (float index 7,8,9)
 uniform sampler2D uTexture;  // Painting texture (sampler index 0)
 
 out vec4 fragColor;
@@ -32,13 +33,12 @@ void main() {
     // Final brightness = ambient + light intensity * falloff
     float brightness = uAmbient + uIntensity * attenuation;
 
-    // Warm light (impressionist warm glow)
-    vec3 warmLight = vec3(1.0, 0.95, 0.85);
-    vec3 litColor = texColor.rgb * brightness * warmLight;
+    // Apply light color
+    vec3 litColor = texColor.rgb * brightness * uLightColor;
 
     // Specular highlight (glossy feel)
     float specular = pow(attenuation, 4.0) * 0.15;
-    litColor += specular * warmLight;
+    litColor += specular * uLightColor;
 
     fragColor = vec4(litColor, texColor.a);
 }
