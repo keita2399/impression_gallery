@@ -134,10 +134,13 @@ class _DetailScreenState extends State<DetailScreen> {
     setState(() {});
   }
 
+  bool get _isMobile => MediaQuery.of(context).size.width < 600;
+
   @override
   Widget build(BuildContext context) {
     final artwork = _detail ?? widget.artwork;
     final jaArtist = TranslateService.translateArtist(artwork.artist);
+    final isMobile = _isMobile;
 
     if (_fullscreenZoom) {
       return Scaffold(
@@ -166,37 +169,10 @@ class _DetailScreenState extends State<DetailScreen> {
                 ),
               ),
             ),
-            // Zoom controls
-            Positioned(
-              top: 50,
-              right: 40,
-              child: Column(
-                children: [
-                  _actionButton(
-                    icon: Icons.close,
-                    label: '戻る',
-                    onTap: _exitZoom,
-                  ),
-                  const SizedBox(height: 16),
-                  _actionButton(
-                    icon: Icons.zoom_in,
-                    label: '拡大',
-                    onTap: _zoomIn,
-                  ),
-                  const SizedBox(height: 16),
-                  _actionButton(
-                    icon: Icons.zoom_out,
-                    label: '縮小',
-                    onTap: _zoomOut,
-                    enabled: _currentScale > 1.0,
-                  ),
-                ],
-              ),
-            ),
             // Scale indicator
             if (_currentScale > 1.0)
               Positioned(
-                top: 50,
+                top: isMobile ? 16 : 50,
                 left: 24,
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -210,18 +186,77 @@ class _DetailScreenState extends State<DetailScreen> {
                   ),
                 ),
               ),
-            // Hint
-            Positioned(
-              bottom: 24,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: Text(
-                  'ドラッグで移動・ホイールで拡大縮小',
-                  style: TextStyle(color: Colors.white.withValues(alpha: 0.3), fontSize: 12),
+            if (isMobile) ...[
+              // Mobile: Top close button
+              Positioned(
+                top: 16,
+                right: 16,
+                child: _actionButton(icon: Icons.close, label: '', onTap: _exitZoom, compact: true),
+              ),
+              // Mobile: Bottom zoom controls
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                child: Container(
+                  padding: const EdgeInsets.only(top: 8, bottom: 20),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [Colors.transparent, Colors.black.withValues(alpha: 0.6)],
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      _actionButton(icon: Icons.zoom_out, label: '縮小', onTap: _zoomOut, enabled: _currentScale > 1.0, compact: true),
+                      const SizedBox(width: 32),
+                      _actionButton(icon: Icons.zoom_in, label: '拡大', onTap: _zoomIn, compact: true),
+                    ],
+                  ),
                 ),
               ),
-            ),
+              // Hint
+              Positioned(
+                bottom: 70,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: Text(
+                    'ピンチで拡大縮小・ドラッグで移動',
+                    style: TextStyle(color: Colors.white.withValues(alpha: 0.3), fontSize: 11),
+                  ),
+                ),
+              ),
+            ] else ...[
+              // PC: Right side zoom controls
+              Positioned(
+                top: 50,
+                right: 40,
+                child: Column(
+                  children: [
+                    _actionButton(icon: Icons.close, label: '戻る', onTap: _exitZoom),
+                    const SizedBox(height: 16),
+                    _actionButton(icon: Icons.zoom_in, label: '拡大', onTap: _zoomIn),
+                    const SizedBox(height: 16),
+                    _actionButton(icon: Icons.zoom_out, label: '縮小', onTap: _zoomOut, enabled: _currentScale > 1.0),
+                  ],
+                ),
+              ),
+              // Hint
+              Positioned(
+                bottom: 24,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: Text(
+                    'ドラッグで移動・ホイールで拡大縮小',
+                    style: TextStyle(color: Colors.white.withValues(alpha: 0.3), fontSize: 12),
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       );
@@ -235,7 +270,7 @@ class _DetailScreenState extends State<DetailScreen> {
           CustomScrollView(
             slivers: [
               SliverAppBar(
-                expandedHeight: MediaQuery.of(context).size.height * 0.5,
+                expandedHeight: MediaQuery.of(context).size.height * (isMobile ? 0.4 : 0.5),
                 pinned: true,
                 backgroundColor: Colors.black,
                 automaticallyImplyLeading: false,
@@ -258,7 +293,7 @@ class _DetailScreenState extends State<DetailScreen> {
               ),
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.all(24),
+                  padding: EdgeInsets.fromLTRB(24, 24, 24, isMobile ? 80 : 40),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -266,17 +301,17 @@ class _DetailScreenState extends State<DetailScreen> {
                       if (_translatedTitle != null) ...[
                         Text(
                           _translatedTitle!,
-                          style: const TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold, height: 1.3),
+                          style: TextStyle(color: Colors.white, fontSize: isMobile ? 22 : 26, fontWeight: FontWeight.bold, height: 1.3),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           artwork.title,
-                          style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 14, fontStyle: FontStyle.italic),
+                          style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: isMobile ? 12 : 14, fontStyle: FontStyle.italic),
                         ),
                       ] else ...[
                         Text(
                           artwork.title,
-                          style: const TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold, height: 1.3),
+                          style: TextStyle(color: Colors.white, fontSize: isMobile ? 22 : 26, fontWeight: FontWeight.bold, height: 1.3),
                         ),
                       ],
                       const SizedBox(height: 12),
@@ -351,46 +386,86 @@ class _DetailScreenState extends State<DetailScreen> {
                           _infoRow('所蔵', _translatedCredit ?? artwork.creditLine!),
                         ],
                       ],
-                      const SizedBox(height: 40),
                     ],
                   ),
                 ),
               ),
             ],
           ),
-          // Right side buttons
-          Positioned(
-            top: 50,
-            right: 40,
-            child: Column(
-              children: [
-                _actionButton(
-                  icon: Icons.close,
-                  label: '閉じる',
-                  onTap: () => Navigator.pop(context),
-                ),
-                const SizedBox(height: 16),
-                _actionButton(
-                  icon: Icons.share_outlined,
-                  label: 'シェア',
-                  onTap: () {
-                    final jaTitle = _translatedTitle ?? artwork.title;
-                    SharePlus.instance.share(
-                      ShareParams(
-                        text: '$jaTitle\n$jaArtist（${artwork.date}）\n\nhttps://www.artic.edu/artworks/${artwork.id}',
-                      ),
-                    );
-                  },
-                ),
-                const SizedBox(height: 16),
-                _actionButton(
-                  icon: Icons.zoom_in,
-                  label: '拡大',
-                  onTap: _enterZoom,
-                ),
-              ],
+          if (isMobile) ...[
+            // Mobile: Top close button
+            Positioned(
+              top: 16,
+              right: 16,
+              child: _actionButton(icon: Icons.close, label: '', onTap: () => Navigator.pop(context), compact: true),
             ),
-          ),
+            // Mobile: Bottom action bar
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: Container(
+                padding: const EdgeInsets.only(top: 8, bottom: 20),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.9),
+                  border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.08))),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _actionButton(
+                      icon: Icons.share_outlined,
+                      label: 'シェア',
+                      onTap: () {
+                        final jaTitle = _translatedTitle ?? artwork.title;
+                        SharePlus.instance.share(
+                          ShareParams(
+                            text: '$jaTitle\n$jaArtist（${artwork.date}）\n\nhttps://www.artic.edu/artworks/${artwork.id}',
+                          ),
+                        );
+                      },
+                      compact: true,
+                    ),
+                    _actionButton(icon: Icons.zoom_in, label: '拡大', onTap: _enterZoom, compact: true),
+                  ],
+                ),
+              ),
+            ),
+          ] else ...[
+            // PC: Right side buttons
+            Positioned(
+              top: 50,
+              right: 40,
+              child: Column(
+                children: [
+                  _actionButton(
+                    icon: Icons.close,
+                    label: '閉じる',
+                    onTap: () => Navigator.pop(context),
+                  ),
+                  const SizedBox(height: 16),
+                  _actionButton(
+                    icon: Icons.share_outlined,
+                    label: 'シェア',
+                    onTap: () {
+                      final jaTitle = _translatedTitle ?? artwork.title;
+                      SharePlus.instance.share(
+                        ShareParams(
+                          text: '$jaTitle\n$jaArtist（${artwork.date}）\n\nhttps://www.artic.edu/artworks/${artwork.id}',
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  _actionButton(
+                    icon: Icons.zoom_in,
+                    label: '拡大',
+                    onTap: _enterZoom,
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -401,6 +476,7 @@ class _DetailScreenState extends State<DetailScreen> {
     required String label,
     required VoidCallback onTap,
     bool enabled = true,
+    bool compact = false,
   }) {
     return MouseRegion(
       cursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
@@ -409,21 +485,23 @@ class _DetailScreenState extends State<DetailScreen> {
         child: Column(
           children: [
             Container(
-              padding: const EdgeInsets.all(10),
+              padding: EdgeInsets.all(compact ? 8 : 10),
               decoration: BoxDecoration(
                 color: Colors.black.withValues(alpha: 0.5),
                 shape: BoxShape.circle,
               ),
-              child: Icon(icon, color: enabled ? Colors.white : Colors.white30, size: 22),
+              child: Icon(icon, color: enabled ? Colors.white : Colors.white30, size: compact ? 20 : 22),
             ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                color: enabled ? Colors.white70 : Colors.white24,
-                fontSize: 11,
+            if (label.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  color: enabled ? Colors.white70 : Colors.white24,
+                  fontSize: compact ? 10 : 11,
+                ),
               ),
-            ),
+            ],
           ],
         ),
       ),

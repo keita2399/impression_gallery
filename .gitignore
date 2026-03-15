@@ -46,3 +46,4 @@ app.*.map.json
 
 # Firebase config (contains API keys)
 lib/firebase_options.dart
+.vercel

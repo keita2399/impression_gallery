@@ -407,6 +407,44 @@ class _GalleryScreenState extends State<GalleryScreen> {
   Widget _buildArtworkPage(Artwork artwork) {
     final isFav = _favoriteIds.contains(artwork.id);
     final translatedTitle = _translatedTitles[artwork.id];
+    final isMobile = MediaQuery.of(context).size.width < 600;
+
+    final favButton = _sideButton(
+      icon: isFav ? Icons.favorite : Icons.favorite_outline,
+      color: isFav ? Colors.redAccent : Colors.white,
+      label: isFav ? '保存済' : '保存',
+      onTap: () => _toggleFavorite(artwork.id),
+      compact: isMobile,
+    );
+    final shareButton = _sideButton(
+      icon: Icons.share_outlined,
+      color: Colors.white,
+      label: 'シェア',
+      onTap: () {
+        final jaArtist = TranslateService.translateArtist(artwork.artist);
+        final jaTitle = translatedTitle ?? artwork.title;
+        SharePlus.instance.share(
+          ShareParams(
+            text: '$jaTitle\n$jaArtist（${artwork.date}）\n\nhttps://www.artic.edu/artworks/${artwork.id}',
+          ),
+        );
+      },
+      compact: isMobile,
+    );
+    final detailButton = _sideButton(
+      icon: Icons.info_outline,
+      color: Colors.white,
+      label: '詳細',
+      onTap: () async {
+        await Navigator.push(
+          context,
+          MaterialPageRoute(fullscreenDialog: true, builder: (_) => DetailScreen(artwork: artwork)),
+        );
+        final favIds = await FirestoreService.getFavoriteIds();
+        if (mounted) setState(() => _favoriteIds = favIds);
+      },
+      compact: isMobile,
+    );
 
     return Stack(
         fit: StackFit.expand,
@@ -436,62 +474,33 @@ class _GalleryScreenState extends State<GalleryScreen> {
               ),
             ),
           ),
-          // Right side buttons
-          Positioned(
-            right: 48,
-            bottom: 120,
-            child: Column(
-              children: [
-                _sideButton(
-                  icon: isFav ? Icons.favorite : Icons.favorite_outline,
-                  color: isFav ? Colors.redAccent : Colors.white,
-                  label: isFav ? '保存済' : '保存',
-                  onTap: () => _toggleFavorite(artwork.id),
-                ),
-                const SizedBox(height: 24),
-                _sideButton(
-                  icon: Icons.share_outlined,
-                  color: Colors.white,
-                  label: 'シェア',
-                  onTap: () {
-                    final jaArtist = TranslateService.translateArtist(artwork.artist);
-                    final jaTitle = translatedTitle ?? artwork.title;
-                    SharePlus.instance.share(
-                      ShareParams(
-                        text: '$jaTitle\n$jaArtist（${artwork.date}）\n\nhttps://www.artic.edu/artworks/${artwork.id}',
-                      ),
-                    );
-                  },
-                ),
-                const SizedBox(height: 24),
-                _sideButton(
-                  icon: Icons.info_outline,
-                  color: Colors.white,
-                  label: '詳細',
-                  onTap: () async {
-                    await Navigator.push(
-                      context,
-                      MaterialPageRoute(fullscreenDialog: true, builder: (_) => DetailScreen(artwork: artwork)),
-                    );
-                    final favIds = await FirestoreService.getFavoriteIds();
-                    if (mounted) setState(() => _favoriteIds = favIds);
-                  },
-                ),
-              ],
+          if (!isMobile)
+            // PC: Right side buttons
+            Positioned(
+              right: 48,
+              bottom: 120,
+              child: Column(
+                children: [
+                  favButton,
+                  const SizedBox(height: 24),
+                  shareButton,
+                  const SizedBox(height: 24),
+                  detailButton,
+                ],
+              ),
             ),
-          ),
           // Bottom info
           Positioned(
-            bottom: 24,
+            bottom: isMobile ? 80 : 24,
             left: 24,
-            right: 100,
+            right: isMobile ? 24 : 100,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (translatedTitle != null) ...[
                   Text(
                     translatedTitle,
-                    style: TextStyle(color: Colors.white, fontSize: _panelOpen ? 16 : 20, fontWeight: FontWeight.bold, height: 1.2),
+                    style: TextStyle(color: Colors.white, fontSize: _panelOpen ? 16 : (isMobile ? 18 : 20), fontWeight: FontWeight.bold, height: 1.2),
                   ),
                   const SizedBox(height: 2),
                   Text(
@@ -501,7 +510,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
                 ] else ...[
                   Text(
                     artwork.title,
-                    style: TextStyle(color: Colors.white, fontSize: _panelOpen ? 16 : 20, fontWeight: FontWeight.bold, height: 1.2),
+                    style: TextStyle(color: Colors.white, fontSize: _panelOpen ? 16 : (isMobile ? 18 : 20), fontWeight: FontWeight.bold, height: 1.2),
                   ),
                 ],
                 const SizedBox(height: 6),
@@ -512,6 +521,27 @@ class _GalleryScreenState extends State<GalleryScreen> {
               ],
             ),
           ),
+          if (isMobile)
+            // Mobile: Bottom action bar
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: Container(
+                padding: const EdgeInsets.only(top: 8, bottom: 16),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Colors.transparent, Colors.black.withValues(alpha: 0.8)],
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [favButton, shareButton, detailButton],
+                ),
+              ),
+            ),
         ],
     );
   }
@@ -545,6 +575,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
     required Color color,
     required String label,
     required VoidCallback onTap,
+    bool compact = false,
   }) {
     return MouseRegion(
       cursor: SystemMouseCursors.click,
@@ -553,15 +584,15 @@ class _GalleryScreenState extends State<GalleryScreen> {
         child: Column(
           children: [
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: EdgeInsets.all(compact ? 8 : 12),
               decoration: BoxDecoration(
                 color: Colors.black.withValues(alpha: 0.4),
                 shape: BoxShape.circle,
               ),
-              child: Icon(icon, color: color, size: 28),
+              child: Icon(icon, color: color, size: compact ? 22 : 28),
             ),
-            const SizedBox(height: 6),
-            Text(label, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+            const SizedBox(height: 4),
+            Text(label, style: TextStyle(color: Colors.white70, fontSize: compact ? 10 : 12)),
           ],
         ),
       ),
