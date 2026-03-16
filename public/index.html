@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>印象派さんぽ - 名画を光で楽しむギャラリーアプリ</title>
+  <meta name="description" content="シカゴ美術館の印象派コレクションを、光シミュレーションや傾き操作で鑑賞できるインタラクティブなギャラリーアプリ。モネ、ルノワール、ゴッホなど15人の画家の作品を毎日お届け。">
+  <meta name="keywords" content="印象派,モネ,ルノワール,ゴッホ,美術館,ギャラリー,アプリ,光シミュレーション">
+
+  <!-- OGP -->
+  <meta property="og:title" content="印象派さんぽ">
+  <meta property="og:description" content="名画を光で楽しむインタラクティブギャラリー">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://impressiongallery.vercel.app">
+  <meta property="og:image" content="https://impressiongallery.vercel.app/ogp.png">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="印象派さんぽ">
+  <meta name="twitter:description" content="名画を光で楽しむインタラクティブギャラリー">
+
+  <link rel="icon" href="/app/favicon.png">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Kaku Gothic ProN', sans-serif;
+      background: #0a0a10;
+      color: #fff;
+      min-height: 100vh;
+    }
+
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 24px;
+      text-align: center;
+      background: radial-gradient(ellipse at 50% 30%, rgba(26,35,126,0.3) 0%, transparent 70%);
+    }
+
+    .hero h1 {
+      font-size: 3rem;
+      font-weight: 800;
+      margin-bottom: 8px;
+      background: linear-gradient(135deg, #fff 0%, #b8c6ff 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero .subtitle {
+      font-size: 1.1rem;
+      color: rgba(255,255,255,0.6);
+      margin-bottom: 40px;
+    }
+
+    .features {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      max-width: 700px;
+      width: 100%;
+      margin-bottom: 48px;
+    }
+
+    .feature {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 16px;
+      padding: 24px 16px;
+      text-align: center;
+    }
+
+    .feature .icon {
+      font-size: 2rem;
+      margin-bottom: 12px;
+    }
+
+    .feature h3 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    .feature p {
+      font-size: 0.8rem;
+      color: rgba(255,255,255,0.5);
+      line-height: 1.5;
+    }
+
+    .cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: linear-gradient(135deg, #1A237E, #3949AB);
+      color: #fff;
+      text-decoration: none;
+      padding: 16px 40px;
+      border-radius: 32px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      transition: transform 0.2s, box-shadow 0.2s;
+      box-shadow: 0 4px 24px rgba(26,35,126,0.4);
+    }
+
+    .cta:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 32px rgba(26,35,126,0.6);
+    }
+
+    .artists {
+      margin-top: 48px;
+      max-width: 700px;
+      width: 100%;
+    }
+
+    .artists h2 {
+      font-size: 1.2rem;
+      font-weight: 600;
+      margin-bottom: 16px;
+      color: rgba(255,255,255,0.7);
+    }
+
+    .artist-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .artist-tag {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 20px;
+      padding: 6px 14px;
+      font-size: 0.8rem;
+      color: rgba(255,255,255,0.6);
+    }
+
+    .footer {
+      padding: 32px 24px;
+      text-align: center;
+      color: rgba(255,255,255,0.3);
+      font-size: 0.75rem;
+    }
+
+    @media (max-width: 480px) {
+      .hero h1 { font-size: 2rem; }
+      .features { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <section class="hero">
+    <h1>印象派さんぽ</h1>
+    <p class="subtitle">名画を光で楽しむインタラクティブギャラリー</p>
+
+    <div class="features">
+      <div class="feature">
+        <div class="icon">&#x1F3A8;</div>
+        <h3>印象派コレクション</h3>
+        <p>シカゴ美術館の印象派・ポスト印象派作品を収録</p>
+      </div>
+      <div class="feature">
+        <div class="icon">&#x1F4A1;</div>
+        <h3>光シミュレーション</h3>
+        <p>GPUシェーダーで美術館のスポットライトを再現</p>
+      </div>
+      <div class="feature">
+        <div class="icon">&#x1F4F1;</div>
+        <h3>傾き操作</h3>
+        <p>スマホを傾けて光の角度をリアルタイムに変更</p>
+      </div>
+      <div class="feature">
+        <div class="icon">&#x1F3B2;</div>
+        <h3>今日の名画ガチャ</h3>
+        <p>毎日1枚、新しい名画との出会い</p>
+      </div>
+    </div>
+
+    <a class="cta" href="/app/">アプリを開く &rarr;</a>
+
+    <div class="artists">
+      <h2>収録画家</h2>
+      <div class="artist-tags">
+        <span class="artist-tag">クロード・モネ</span>
+        <span class="artist-tag">ルノワール</span>
+        <span class="artist-tag">ドガ</span>
+        <span class="artist-tag">ゴッホ</span>
+        <span class="artist-tag">セザンヌ</span>
+        <span class="artist-tag">ゴーギャン</span>
+        <span class="artist-tag">マネ</span>
+        <span class="artist-tag">ピサロ</span>
+        <span class="artist-tag">スーラ</span>
+        <span class="artist-tag">カサット</span>
+        <span class="artist-tag">シスレー</span>
+        <span class="artist-tag">モリゾ</span>
+        <span class="artist-tag">カイユボット</span>
+        <span class="artist-tag">ロートレック</span>
+        <span class="artist-tag">シニャック</span>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <p>Art data provided by the Art Institute of Chicago API</p>
+  </footer>
+</body>
+</html>

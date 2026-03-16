@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:share_plus/share_plus.dart';
+import '../models/artist.dart';
 import '../models/artwork.dart';
 import '../services/art_api.dart';
 import '../services/firestore_service.dart';
 import '../services/translate_service.dart';
+import 'artist_screen.dart';
 import 'detail_screen.dart';
 
 class GalleryScreen extends StatefulWidget {
@@ -138,12 +140,22 @@ class _GalleryScreenState extends State<GalleryScreen> {
 
   Widget _filterChip(String label, String? artist) {
     final selected = _selectedArtist == artist;
+    final profile = artist != null ? ArtistProfile.byName(artist) : null;
     return ListTile(
       title: Text(label, style: TextStyle(color: selected ? Colors.amber : Colors.white70)),
       leading: Icon(
         selected ? Icons.radio_button_checked : Icons.radio_button_off,
         color: selected ? Colors.amber : Colors.white30,
       ),
+      trailing: profile != null
+          ? GestureDetector(
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(context, MaterialPageRoute(builder: (_) => ArtistScreen(artist: profile)));
+              },
+              child: Icon(Icons.info_outline, color: Colors.white.withValues(alpha: 0.3), size: 20),
+            )
+          : null,
       onTap: () {
         Navigator.pop(context);
         if (_selectedArtist != artist) {

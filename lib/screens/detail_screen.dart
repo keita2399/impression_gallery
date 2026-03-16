@@ -2,10 +2,13 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../models/artist.dart';
 import '../models/artwork.dart';
 import '../services/art_api.dart';
 import '../services/translate_service.dart';
 import '../widgets/light_simulation_widget.dart';
+import 'artist_screen.dart';
 
 class DetailScreen extends StatefulWidget {
   final Artwork artwork;
@@ -119,6 +122,16 @@ class _DetailScreenState extends State<DetailScreen> {
 
   bool get _isMobile => MediaQuery.of(context).size.width < 600;
 
+  Future<void> _downloadImage() async {
+    final artwork = _detail ?? widget.artwork;
+    final url = artwork.imageUrlHigh ?? artwork.imageUrl;
+    if (url == null) return;
+    final uri = Uri.parse(url);
+    try {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {}
+  }
+
   @override
   Widget build(BuildContext context) {
     final artwork = _detail ?? widget.artwork;
@@ -195,19 +208,36 @@ class _DetailScreenState extends State<DetailScreen> {
                         spacing: 8,
                         runSpacing: 8,
                         children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text(jaArtist, style: const TextStyle(color: Colors.white, fontSize: 14)),
-                                if (jaArtist != artwork.artist)
-                                  Text(artwork.artist, style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 11)),
-                              ],
+                          GestureDetector(
+                            onTap: () {
+                              final profile = ArtistProfile.byName(artwork.artist);
+                              if (profile != null) {
+                                Navigator.push(context, MaterialPageRoute(builder: (_) => ArtistScreen(artist: profile)));
+                              }
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(jaArtist, style: const TextStyle(color: Colors.white, fontSize: 14)),
+                                      if (jaArtist != artwork.artist)
+                                        Text(artwork.artist, style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 11)),
+                                    ],
+                                  ),
+                                  if (ArtistProfile.byName(artwork.artist) != null) ...[
+                                    const SizedBox(width: 6),
+                                    Icon(Icons.arrow_forward_ios, color: Colors.white.withValues(alpha: 0.3), size: 12),
+                                  ],
+                                ],
+                              ),
                             ),
                           ),
                           Container(
@@ -302,6 +332,7 @@ class _DetailScreenState extends State<DetailScreen> {
                       compact: true,
                     ),
                     _actionButton(icon: Icons.zoom_in, label: '拡大', onTap: _enterZoom, compact: true),
+                    _actionButton(icon: Icons.download_outlined, label: '保存', onTap: _downloadImage, compact: true),
                     _actionButton(
                       icon: Icons.wb_sunny_outlined,
                       label: '光',
@@ -342,6 +373,12 @@ class _DetailScreenState extends State<DetailScreen> {
                     icon: Icons.zoom_in,
                     label: '拡大',
                     onTap: _enterZoom,
+                  ),
+                  const SizedBox(height: 16),
+                  _actionButton(
+                    icon: Icons.download_outlined,
+                    label: '保存',
+                    onTap: _downloadImage,
                   ),
                   const SizedBox(height: 16),
                   _actionButton(
