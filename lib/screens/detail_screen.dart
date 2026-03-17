@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../models/artist.dart';
 import '../models/artwork.dart';
 import '../services/art_api.dart';
+import '../services/color_palette.dart';
 import '../services/translate_service.dart';
 import '../widgets/light_simulation_widget.dart';
 import 'artist_screen.dart';
@@ -29,11 +30,22 @@ class _DetailScreenState extends State<DetailScreen> {
   String? _translatedCredit;
   bool _translating = false;
   bool _lightSimulation = false;
+  List<ColorInfo> _palette = [];
 
   @override
   void initState() {
     super.initState();
     _loadDetail();
+    _extractPalette();
+  }
+
+  Future<void> _extractPalette() async {
+    final url = widget.artwork.imageUrl;
+    if (url == null) return;
+    final colors = await ColorPaletteExtractor.extract(url);
+    if (mounted && colors.isNotEmpty) {
+      setState(() => _palette = colors);
+    }
   }
 
   Future<void> _loadDetail() async {
@@ -250,6 +262,43 @@ class _DetailScreenState extends State<DetailScreen> {
                           ),
                         ],
                       ),
+                      // Color palette
+                      if (_palette.isNotEmpty) ...[
+                        const SizedBox(height: 20),
+                        Text('この作品の色彩', style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 12, fontWeight: FontWeight.w600)),
+                        const SizedBox(height: 10),
+                        Row(
+                          children: _palette.map((info) {
+                            final isDark = HSLColor.fromColor(info.color).lightness < 0.45;
+                            final textColor = isDark ? Colors.white.withValues(alpha: 0.8) : Colors.black.withValues(alpha: 0.6);
+                            return Expanded(
+                              child: Padding(
+                                padding: const EdgeInsets.only(right: 4),
+                                child: Container(
+                                  height: 52,
+                                  decoration: BoxDecoration(
+                                    color: info.color,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        _colorName(info.color),
+                                        style: TextStyle(color: textColor, fontSize: 9, fontWeight: FontWeight.w600),
+                                      ),
+                                      Text(
+                                        '${info.percentage.round()}%',
+                                        style: TextStyle(color: textColor.withValues(alpha: 0.7), fontSize: 9),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ],
                       // Description
                       if (artwork.description != null) ...[
                         const SizedBox(height: 24),
@@ -430,6 +479,41 @@ class _DetailScreenState extends State<DetailScreen> {
         ),
       ),
     );
+  }
+
+  String _colorName(Color c) {
+    final hsl = HSLColor.fromColor(c);
+    final h = hsl.hue;
+    final s = hsl.saturation;
+    final l = hsl.lightness;
+
+    if (l > 0.85) return '白';
+    if (l < 0.15) return '黒';
+    if (s < 0.12) {
+      if (l > 0.6) return '灰白';
+      if (l > 0.35) return '灰';
+      return '暗灰';
+    }
+    if (s < 0.3) {
+      if (h < 30 || h >= 330) return 'くすみ赤';
+      if (h < 70) return 'くすみ黄';
+      if (h < 160) return 'くすみ緑';
+      if (h < 250) return 'くすみ青';
+      return 'くすみ紫';
+    }
+    // Chromatic colors
+    if (h < 15) return '赤';
+    if (h < 35) return l > 0.55 ? '肌色' : '朱';
+    if (h < 50) return '山吹';
+    if (h < 70) return '黄';
+    if (h < 85) return '黄緑';
+    if (h < 160) return l > 0.45 ? '翠' : '深緑';
+    if (h < 190) return '青緑';
+    if (h < 220) return '青';
+    if (h < 260) return l > 0.4 ? '藤' : '紺';
+    if (h < 290) return '紫';
+    if (h < 330) return l > 0.5 ? '桃' : '紅';
+    return '赤';
   }
 
   Widget _removeHtmlTags(String html) {
