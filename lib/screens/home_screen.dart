@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../models/artwork.dart';
 import '../services/art_api.dart';
+import '../services/bgm_service.dart';
 import '../services/firestore_service.dart';
 import '../services/translate_service.dart';
 import 'detail_screen.dart';
@@ -24,6 +25,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   String? _translatedTitle;
   String? _translatedDescription;
   bool _isFavorite = false;
+  bool _bgmPlaying = false;
   late AnimationController _fadeController;
   late Animation<double> _fadeAnim;
   late Animation<Offset> _slideAnim;
@@ -183,13 +185,32 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     ],
                   ),
                 ),
-                _iconButton(
-                  icon: _isFavorite ? Icons.favorite : Icons.favorite_outline,
-                  color: _isFavorite ? Colors.redAccent : Colors.white70,
-                  onTap: () async {
-                    final result = await FirestoreService.toggleFavorite(artwork.id);
-                    setState(() => _isFavorite = result);
-                  },
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _iconButton(
+                      icon: _bgmPlaying ? Icons.music_note : Icons.music_off,
+                      color: _bgmPlaying ? Colors.amber : Colors.white70,
+                      isActive: _bgmPlaying,
+                      onTap: () {
+                        setState(() => _bgmPlaying = !_bgmPlaying);
+                        if (_bgmPlaying) {
+                          BgmService.instance.play();
+                        } else {
+                          BgmService.instance.pause();
+                        }
+                      },
+                    ),
+                    const SizedBox(width: 8),
+                    _iconButton(
+                      icon: _isFavorite ? Icons.favorite : Icons.favorite_outline,
+                      color: _isFavorite ? Colors.redAccent : Colors.white70,
+                      onTap: () async {
+                        final result = await FirestoreService.toggleFavorite(artwork.id);
+                        setState(() => _isFavorite = result);
+                      },
+                    ),
+                  ],
                 ),
               ],
             ),
