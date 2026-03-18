@@ -7,6 +7,7 @@ import '../models/artist.dart';
 import '../models/artwork.dart';
 import '../services/art_api.dart';
 import '../services/color_palette.dart';
+import '../services/similar_works.dart';
 import '../services/translate_service.dart';
 import '../widgets/light_simulation_widget.dart';
 import 'artist_screen.dart';
@@ -31,12 +32,25 @@ class _DetailScreenState extends State<DetailScreen> {
   bool _translating = false;
   bool _lightSimulation = false;
   List<ColorInfo> _palette = [];
+  List<SimilarWork> _similarWorks = [];
+  bool _loadingSimilar = false;
 
   @override
   void initState() {
     super.initState();
     _loadDetail();
     _extractPalette();
+    _loadSimilarWorks();
+  }
+
+  Future<void> _loadSimilarWorks() async {
+    setState(() => _loadingSimilar = true);
+    try {
+      final results = await SimilarWorksService.instance.findSimilar(widget.artwork);
+      if (mounted) setState(() { _similarWorks = results; _loadingSimilar = false; });
+    } catch (_) {
+      if (mounted) setState(() => _loadingSimilar = false);
+    }
   }
 
   Future<void> _extractPalette() async {
@@ -342,6 +356,107 @@ class _DetailScreenState extends State<DetailScreen> {
                           const SizedBox(height: 12),
                           _infoRow('所蔵', _translatedCredit ?? artwork.creditLine!),
                         ],
+                      ],
+                      // Similar works section
+                      if (_similarWorks.isNotEmpty || _loadingSimilar) ...[
+                        const SizedBox(height: 28),
+                        Text('色が似ている作品', style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: isMobile ? 12 : 14, fontWeight: FontWeight.w600)),
+                        const SizedBox(height: 12),
+                        if (_loadingSimilar)
+                          Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+                                  const SizedBox(width: 8),
+                                  Text('分析中...', style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 12)),
+                                ],
+                              ),
+                            ),
+                          )
+                        else
+                          SizedBox(
+                            height: isMobile ? 160 : 200,
+                            child: ListView.builder(
+                              scrollDirection: Axis.horizontal,
+                              itemCount: _similarWorks.length,
+                              itemBuilder: (context, index) {
+                                final sw = _similarWorks[index];
+                                final simPercent = (sw.similarity * 100).round();
+                                return GestureDetector(
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        fullscreenDialog: true,
+                                        builder: (_) => DetailScreen(artwork: sw.artwork),
+                                      ),
+                                    );
+                                  },
+                                  child: Container(
+                                    width: isMobile ? 120 : 150,
+                                    margin: const EdgeInsets.only(right: 12),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Expanded(
+                                          child: ClipRRect(
+                                            borderRadius: BorderRadius.circular(10),
+                                            child: Stack(
+                                              fit: StackFit.expand,
+                                              children: [
+                                                if (sw.artwork.imageUrl != null)
+                                                  Hero(
+                                                    tag: 'artwork_${sw.artwork.id}',
+                                                    child: CachedNetworkImage(
+                                                      imageUrl: sw.artwork.imageUrl!,
+                                                      fit: BoxFit.cover,
+                                                      httpHeaders: ArtApi.imageHeaders,
+                                                      placeholder: (_, __) => Container(color: Colors.grey[900]),
+                                                      errorWidget: (_, __, ___) => Container(color: Colors.grey[900]),
+                                                    ),
+                                                  ),
+                                                Positioned(
+                                                  top: 6,
+                                                  right: 6,
+                                                  child: Container(
+                                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                    decoration: BoxDecoration(
+                                                      color: Colors.black.withValues(alpha: 0.6),
+                                                      borderRadius: BorderRadius.circular(8),
+                                                    ),
+                                                    child: Text(
+                                                      '$simPercent%',
+                                                      style: TextStyle(color: Colors.amber.withValues(alpha: 0.8), fontSize: 10, fontWeight: FontWeight.bold),
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 6),
+                                        Text(
+                                          sw.artwork.title,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: isMobile ? 10 : 12),
+                                        ),
+                                        Text(
+                                          TranslateService.translateArtist(sw.artwork.artist),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(color: Colors.white.withValues(alpha: 0.35), fontSize: isMobile ? 9 : 10),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
                       ],
                     ],
                   ),
