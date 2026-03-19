@@ -10,6 +10,7 @@ import '../services/color_palette.dart';
 import '../services/similar_works.dart';
 import '../services/stats_service.dart';
 import '../services/translate_service.dart';
+import '../services/tts_stub.dart' if (dart.library.js_interop) '../services/tts_web.dart';
 import '../widgets/light_simulation_widget.dart';
 import 'artist_screen.dart';
 
@@ -35,6 +36,7 @@ class _DetailScreenState extends State<DetailScreen> {
   List<ColorInfo> _palette = [];
   List<SimilarWork> _similarWorks = [];
   bool _loadingSimilar = false;
+  bool _isSpeaking = false;
 
   @override
   void initState() {
@@ -149,6 +151,12 @@ class _DetailScreenState extends State<DetailScreen> {
   }
 
   bool get _isMobile => MediaQuery.of(context).size.width < 600;
+
+  @override
+  void dispose() {
+    if (_isSpeaking) stopSpeaking();
+    super.dispose();
+  }
 
   Future<void> _downloadImage() async {
     final artwork = _detail ?? widget.artwork;
@@ -279,9 +287,63 @@ class _DetailScreenState extends State<DetailScreen> {
                           ),
                         ],
                       ),
-                      // Description
+                      // Description with audio guide button
                       if (artwork.description != null) ...[
                         const SizedBox(height: 24),
+                        // Audio guide button
+                        if (_translatedDescription != null || !_translating)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: GestureDetector(
+                              onTap: () async {
+                                if (_isSpeaking) {
+                                  stopSpeaking();
+                                  setState(() => _isSpeaking = false);
+                                } else {
+                                  final text = _buildSpeechText(artwork);
+                                  setState(() => _isSpeaking = true);
+                                  await speakText(text);
+                                  // Auto-reset after estimated duration
+                                  Future.delayed(Duration(seconds: (text.length / 4).round() + 3), () {
+                                    if (mounted) setState(() => _isSpeaking = false);
+                                  });
+                                }
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: _isSpeaking
+                                      ? Colors.amber.withValues(alpha: 0.2)
+                                      : Colors.white.withValues(alpha: 0.05),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: _isSpeaking
+                                        ? Colors.amber.withValues(alpha: 0.4)
+                                        : Colors.white.withValues(alpha: 0.1),
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      _isSpeaking ? Icons.stop_circle : Icons.headphones,
+                                      color: _isSpeaking ? Colors.amber : Colors.white54,
+                                      size: 18,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      _isSpeaking ? '読み上げ停止' : '音声ガイド',
+                                      style: TextStyle(
+                                        color: _isSpeaking ? Colors.amber : Colors.white54,
+                                        fontSize: 12,
+                                        fontWeight: _isSpeaking ? FontWeight.bold : FontWeight.normal,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
                         if (_translatedDescription != null)
                           Text(
                             _translatedDescription!,
@@ -599,6 +661,21 @@ class _DetailScreenState extends State<DetailScreen> {
         ),
       ),
     );
+  }
+
+  String _buildSpeechText(Artwork artwork) {
+    final jaArtist = TranslateService.translateArtist(artwork.artist);
+    final title = _translatedTitle ?? artwork.title;
+    final desc = _translatedDescription ?? artwork.description?.replaceAll(RegExp(r'<[^>]*>'), '') ?? '';
+    final medium = _translatedMedium ?? artwork.medium ?? '';
+
+    final parts = <String>[];
+    parts.add('$title。');
+    parts.add('$jaArtist、${artwork.date}。');
+    if (desc.isNotEmpty) parts.add(desc);
+    if (medium.isNotEmpty) parts.add('技法は、$medium。');
+
+    return parts.join(' ');
   }
 
   String _colorName(Color c) {
