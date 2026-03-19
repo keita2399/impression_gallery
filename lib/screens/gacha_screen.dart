@@ -42,7 +42,7 @@ class _GachaScreenState extends State<GachaScreen> with SingleTickerProviderStat
     final today = DateTime.now().toIso8601String().substring(0, 10);
 
     try {
-      final works = await ArtApi.fetchHighlights(limit: 80);
+      final works = await ArtApi.fetchHighlights(limit: 20);
       setState(() {
         _allWorks = works;
         _loading = false;
@@ -307,7 +307,7 @@ class _GachaScreenState extends State<GachaScreen> with SingleTickerProviderStat
                           child: CachedNetworkImage(
                             imageUrl: artwork.imageUrl!,
                             fit: BoxFit.contain,
-                            httpHeaders: ArtApi.imageHeaders,
+
                             placeholder: (context, url) => const SizedBox(
                               height: 200,
                               child: Center(child: CircularProgressIndicator()),
@@ -403,7 +403,7 @@ class _GachaScreenState extends State<GachaScreen> with SingleTickerProviderStat
                   CachedNetworkImage(
                     imageUrl: artwork.imageUrl!,
                     fit: BoxFit.cover,
-                    httpHeaders: ArtApi.imageHeaders,
+
                     placeholder: (context, url) => Container(color: Colors.grey[900]),
                     errorWidget: (context, url, error) => Container(
                       color: Colors.grey[900],

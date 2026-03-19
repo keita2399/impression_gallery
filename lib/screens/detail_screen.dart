@@ -206,7 +206,7 @@ class _DetailScreenState extends State<DetailScreen> {
                               child: CachedNetworkImage(
                                 imageUrl: artwork.imageUrlHigh ?? artwork.imageUrl!,
                                 fit: BoxFit.contain,
-                                httpHeaders: ArtApi.imageHeaders,
+
                                 placeholder: (context, url) => const Center(child: CircularProgressIndicator()),
                                 errorWidget: (context, url, error) => const Center(child: Icon(Icons.broken_image, color: Colors.white54, size: 64)),
                               ),
@@ -483,7 +483,7 @@ class _DetailScreenState extends State<DetailScreen> {
                                                     child: CachedNetworkImage(
                                                       imageUrl: sw.artwork.imageUrl!,
                                                       fit: BoxFit.cover,
-                                                      httpHeaders: ArtApi.imageHeaders,
+                      
                                                       placeholder: (_, __) => Container(color: Colors.grey[900]),
                                                       errorWidget: (_, __, ___) => Container(color: Colors.grey[900]),
                                                     ),
@@ -861,7 +861,7 @@ class FullscreenZoomPageState extends State<FullscreenZoomPage>
                 child: CachedNetworkImage(
                   imageUrl: artwork.imageUrlHigh ?? artwork.imageUrl!,
                   fit: BoxFit.contain,
-                  httpHeaders: ArtApi.imageHeaders,
+
                   placeholder: (context, url) => const Center(child: CircularProgressIndicator()),
                   errorWidget: (context, url, error) => const Center(child: Icon(Icons.broken_image, color: Colors.white54, size: 64)),
                 ),

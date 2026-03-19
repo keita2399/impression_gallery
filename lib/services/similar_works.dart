@@ -25,7 +25,7 @@ class SimilarWorksService {
     if (_allWorks != null || _loading) return;
     _loading = true;
     try {
-      _allWorks = await ArtApi.fetchHighlights(limit: 80);
+      _allWorks = await ArtApi.fetchHighlights(limit: 20);
     } catch (_) {
       _allWorks = [];
     }

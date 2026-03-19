@@ -26,7 +26,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
 
   Future<void> _loadWorks() async {
     try {
-      final works = await ArtApi.fetchHighlights(limit: 80);
+      final works = await ArtApi.fetchHighlights(limit: 20);
       final map = <String, Artwork>{};
       for (final w in works) {
         if (w.imageUrl != null && !map.containsKey(w.artist)) {
@@ -245,7 +245,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
               height: compact ? 100 : 140,
               width: double.infinity,
               fit: BoxFit.cover,
-              httpHeaders: ArtApi.imageHeaders,
+
               placeholder: (_, __) => Container(height: compact ? 100 : 140, color: Colors.grey[900]),
               errorWidget: (_, __, ___) => const SizedBox.shrink(),
             ),

@@ -27,7 +27,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
   Future<void> _loadAll() async {
     try {
-      final works = await ArtApi.fetchHighlights(limit: 80);
+      final works = await ArtApi.fetchHighlights(limit: 20);
       setState(() {
         _allWorks = works;
         _results = works;
@@ -128,7 +128,7 @@ class _SearchScreenState extends State<SearchScreen> {
                                 width: 60,
                                 height: 60,
                                 fit: BoxFit.cover,
-                                httpHeaders: ArtApi.imageHeaders,
+
                                 errorWidget: (context, url, error) => Container(
                                   width: 60,
                                   height: 60,

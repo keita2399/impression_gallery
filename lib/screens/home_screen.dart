@@ -44,17 +44,26 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   Future<void> _loadTodayArtwork() async {
     try {
-      final works = await ArtApi.fetchHighlights(limit: 80);
-      if (works.isNotEmpty) {
-        final dayIndex = DateTime.now().day % works.length;
+      // ハイライト作品のIDリストだけ取得（軽量）
+      final ids = await ArtApi.searchObjectIds(isHighlight: true);
+      if (ids.isEmpty) {
+        setState(() { _error = '作品が見つかりません'; _loading = false; });
+        return;
+      }
+      // 日付ベースで1件選んで詳細取得
+      final dayIndex = DateTime.now().day % ids.length;
+      final artwork = await ArtApi.fetchArtworkDetail(ids[dayIndex]);
+      if (artwork != null && mounted) {
         setState(() {
-          _todayArtwork = works[dayIndex];
+          _todayArtwork = artwork;
           _loading = false;
         });
         _fadeController.forward();
-        _translateArtwork(works[dayIndex]);
-        final fav = await FirestoreService.isFavorite(works[dayIndex].id);
+        _translateArtwork(artwork);
+        final fav = await FirestoreService.isFavorite(artwork.id);
         if (mounted) setState(() => _isFavorite = fav);
+      } else {
+        setState(() { _error = '作品の取得に失敗しました'; _loading = false; });
       }
     } catch (e) {
       setState(() {
@@ -114,7 +123,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   Widget _buildHome() {
     if (_loading) {
-      return const Center(child: CircularProgressIndicator());
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircularProgressIndicator(color: Color(0xFF8B0000)),
+            const SizedBox(height: 16),
+            Text('今日の名画を探しています...', style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 14)),
+          ],
+        ),
+      );
     }
     if (_error != null) {
       return Center(child: Text('エラー: $_error', style: const TextStyle(color: Colors.white)));
@@ -146,7 +164,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 imageUrl: artwork.imageUrl!,
                 fit: BoxFit.cover,
                 alignment: Alignment.topCenter,
-                httpHeaders: ArtApi.imageHeaders,
+
                 placeholder: (context, url) => const Center(child: CircularProgressIndicator()),
                 errorWidget: (context, url, error) => const Center(child: Icon(Icons.broken_image, color: Colors.white54, size: 64)),
               ),

@@ -59,9 +59,11 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     }
 
     try {
-      final allWorks = await ArtApi.fetchHighlights(limit: 80);
+      // お気に入りIDから直接作品詳細を取得
+      final futures = favSet.map((id) => ArtApi.fetchArtworkDetail(id));
+      final results = await Future.wait(futures);
       setState(() {
-        _favorites = allWorks.where((a) => favSet.contains(a.id)).toList();
+        _favorites = results.whereType<Artwork>().toList();
         _loading = false;
       });
     } catch (e) {
@@ -180,7 +182,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                     child: CachedNetworkImage(
                       imageUrl: artwork.imageUrl!,
                       fit: BoxFit.cover,
-                      httpHeaders: ArtApi.imageHeaders,
+
                       placeholder: (context, url) => Container(color: Colors.grey[900]),
                       errorWidget: (context, url, error) => Container(
                         color: Colors.grey[900],

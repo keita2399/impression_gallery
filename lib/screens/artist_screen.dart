@@ -30,7 +30,7 @@ class _ArtistScreenState extends State<ArtistScreen> with SingleTickerProviderSt
 
   Future<void> _loadWorks() async {
     try {
-      final works = await ArtApi.fetchHighlights(limit: 80, query: widget.artist.name);
+      final works = await ArtApi.fetchHighlights(limit: 20, query: widget.artist.name);
       if (mounted) {
         setState(() {
           _works = works;
@@ -220,7 +220,7 @@ class _ArtistScreenState extends State<ArtistScreen> with SingleTickerProviderSt
                   child: CachedNetworkImage(
                     imageUrl: artwork.imageUrl!,
                     fit: BoxFit.cover,
-                    httpHeaders: ArtApi.imageHeaders,
+
                     placeholder: (context, url) => Container(color: Colors.grey[900]),
                     errorWidget: (context, url, error) => Container(
                       color: Colors.grey[900],

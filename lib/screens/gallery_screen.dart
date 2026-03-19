@@ -43,7 +43,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
 
     try {
       final works = await ArtApi.fetchHighlights(
-        limit: 80,
+        limit: 20,
         query: _selectedArtist,
       );
       setState(() {
@@ -373,7 +373,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
                                               width: 44,
                                               height: 44,
                                               fit: BoxFit.cover,
-                                              httpHeaders: ArtApi.imageHeaders,
+
                                               errorWidget: (context, url, error) => Container(
                                                 width: 44, height: 44,
                                                 color: Colors.grey[900],
@@ -484,7 +484,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
                   child: CachedNetworkImage(
                     imageUrl: artwork.imageUrl!,
                     fit: BoxFit.contain,
-                    httpHeaders: ArtApi.imageHeaders,
+
                     placeholder: (context, url) => const Center(child: CircularProgressIndicator()),
                     errorWidget: (context, url, error) => const Center(child: Icon(Icons.broken_image, color: Colors.white54, size: 64)),
                   ),

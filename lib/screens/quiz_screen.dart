@@ -58,7 +58,7 @@ class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
 
   Future<void> _loadData() async {
     try {
-      final works = await ArtApi.fetchHighlights(limit: 80);
+      final works = await ArtApi.fetchHighlights(limit: 20);
       setState(() {
         _allWorks = works.where((w) => w.imageUrl != null).toList();
         _loading = false;
@@ -262,7 +262,7 @@ class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
                                 child: CachedNetworkImage(
                                   imageUrl: work.imageUrl!,
                                   fit: BoxFit.contain,
-                                  httpHeaders: ArtApi.imageHeaders,
+
                                   placeholder: (_, __) => Container(color: Colors.grey[900]),
                                   errorWidget: (_, __, ___) => const Center(child: Icon(Icons.broken_image, color: Colors.white24, size: 48)),
                                 ),
