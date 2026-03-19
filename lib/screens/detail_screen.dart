@@ -279,45 +279,6 @@ class _DetailScreenState extends State<DetailScreen> {
                           ),
                         ],
                       ),
-                      // Color palette
-                      if (_palette.isNotEmpty) ...[
-                        const SizedBox(height: 20),
-                        Text('この作品の色彩', style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: isMobile ? 12 : 14, fontWeight: FontWeight.w600)),
-                        const SizedBox(height: 10),
-                        Row(
-                          children: _palette.map((info) {
-                            final isDark = HSLColor.fromColor(info.color).lightness < 0.45;
-                            final textColor = isDark ? Colors.white.withValues(alpha: 0.8) : Colors.black.withValues(alpha: 0.6);
-                            final labelSize = isMobile ? 10.0 : 13.0;
-                            final barHeight = isMobile ? 52.0 : 64.0;
-                            return Expanded(
-                              child: Padding(
-                                padding: const EdgeInsets.only(right: 4),
-                                child: Container(
-                                  height: barHeight,
-                                  decoration: BoxDecoration(
-                                    color: info.color,
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Text(
-                                        _colorName(info.color),
-                                        style: TextStyle(color: textColor, fontSize: labelSize, fontWeight: FontWeight.w600),
-                                      ),
-                                      Text(
-                                        '${info.percentage.round()}%',
-                                        style: TextStyle(color: textColor.withValues(alpha: 0.7), fontSize: labelSize),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            );
-                          }).toList(),
-                        ),
-                      ],
                       // Description
                       if (artwork.description != null) ...[
                         const SizedBox(height: 24),
@@ -358,6 +319,45 @@ class _DetailScreenState extends State<DetailScreen> {
                           const SizedBox(height: 12),
                           _infoRow('所蔵', _translatedCredit ?? artwork.creditLine!),
                         ],
+                      ],
+                      // Color palette
+                      if (_palette.isNotEmpty) ...[
+                        const SizedBox(height: 24),
+                        Text('この作品の色彩', style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: isMobile ? 12 : 14, fontWeight: FontWeight.w600)),
+                        const SizedBox(height: 10),
+                        Row(
+                          children: _palette.map((info) {
+                            final isDark = HSLColor.fromColor(info.color).lightness < 0.45;
+                            final textColor = isDark ? Colors.white.withValues(alpha: 0.8) : Colors.black.withValues(alpha: 0.6);
+                            final labelSize = isMobile ? 10.0 : 13.0;
+                            final barHeight = isMobile ? 52.0 : 64.0;
+                            return Expanded(
+                              child: Padding(
+                                padding: const EdgeInsets.only(right: 4),
+                                child: Container(
+                                  height: barHeight,
+                                  decoration: BoxDecoration(
+                                    color: info.color,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        _colorName(info.color),
+                                        style: TextStyle(color: textColor, fontSize: labelSize, fontWeight: FontWeight.w600),
+                                      ),
+                                      Text(
+                                        '${info.percentage.round()}%',
+                                        style: TextStyle(color: textColor.withValues(alpha: 0.7), fontSize: labelSize),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
                       ],
                       // Similar works section
                       if (_similarWorks.isNotEmpty || _loadingSimilar) ...[

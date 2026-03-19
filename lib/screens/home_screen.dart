@@ -8,6 +8,7 @@ import '../services/translate_service.dart';
 import 'detail_screen.dart';
 import 'gallery_screen.dart';
 import 'favorites_screen.dart';
+import '../widgets/install_banner.dart';
 import 'gacha_screen.dart';
 import 'timeline_screen.dart';
 
@@ -84,7 +85,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     ];
 
     return Scaffold(
-      body: screens[_currentIndex],
+      body: Column(
+        children: [
+          Expanded(child: screens[_currentIndex]),
+          const InstallBanner(),
+        ],
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
         onDestinationSelected: (i) => setState(() => _currentIndex = i),

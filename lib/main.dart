@@ -6,6 +6,7 @@ import 'services/firestore_service.dart';
 import 'services/art_api.dart';
 import 'screens/home_screen.dart';
 import 'screens/detail_screen.dart';
+import 'widgets/install_prompt_stub.dart' if (dart.library.js_interop) 'widgets/install_prompt_web.dart';
 
 int? _getArtworkIdFromUrl() {
   if (!kIsWeb) return null;
@@ -20,6 +21,7 @@ int? _getArtworkIdFromUrl() {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  initInstallPrompt();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
