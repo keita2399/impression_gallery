@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import '../widgets/art_image.dart';
 import '../models/timeline_event.dart';
 import '../models/artist.dart';
 import '../models/artwork.dart';
@@ -240,7 +240,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
         children: [
           // Image
           if (imageUrl != null)
-            CachedNetworkImage(
+            ArtImage(
               imageUrl: imageUrl,
               height: compact ? 100 : 140,
               width: double.infinity,

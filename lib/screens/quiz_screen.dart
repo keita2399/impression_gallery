@@ -1,6 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import '../widgets/art_image.dart';
 import '../models/artwork.dart';
 import '../services/art_api.dart';
 import '../services/translate_service.dart';
@@ -259,7 +259,7 @@ class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
                             children: [
                               Hero(
                                 tag: 'artwork_${work.id}',
-                                child: CachedNetworkImage(
+                                child: ArtImage(
                                   imageUrl: work.imageUrl!,
                                   fit: BoxFit.contain,
 

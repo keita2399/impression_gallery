@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import '../widgets/art_image.dart';
 import '../models/artwork.dart';
 import '../services/art_api.dart';
 import '../services/bgm_service.dart';
@@ -160,7 +160,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           if (artwork.imageUrl != null)
             Hero(
               tag: 'artwork_${artwork.id}',
-              child: CachedNetworkImage(
+              child: ArtImage(
                 imageUrl: artwork.imageUrl!,
                 fit: BoxFit.cover,
                 alignment: Alignment.topCenter,

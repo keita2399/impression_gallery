@@ -1,6 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import '../widgets/art_image.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/artist.dart';
@@ -203,7 +203,7 @@ class _DetailScreenState extends State<DetailScreen> {
                             onTap: _enterZoom,
                             child: Hero(
                               tag: 'artwork_${artwork.id}',
-                              child: CachedNetworkImage(
+                              child: ArtImage(
                                 imageUrl: artwork.imageUrlHigh ?? artwork.imageUrl!,
                                 fit: BoxFit.contain,
 
@@ -480,7 +480,7 @@ class _DetailScreenState extends State<DetailScreen> {
                                                 if (sw.artwork.imageUrl != null)
                                                   Hero(
                                                     tag: 'artwork_${sw.artwork.id}',
-                                                    child: CachedNetworkImage(
+                                                    child: ArtImage(
                                                       imageUrl: sw.artwork.imageUrl!,
                                                       fit: BoxFit.cover,
                       
@@ -858,7 +858,7 @@ class FullscreenZoomPageState extends State<FullscreenZoomPage>
                   final scale = _zoomController.value.getMaxScaleOnAxis();
                   setState(() => _currentScale = scale);
                 },
-                child: CachedNetworkImage(
+                child: ArtImage(
                   imageUrl: artwork.imageUrlHigh ?? artwork.imageUrl!,
                   fit: BoxFit.contain,
 

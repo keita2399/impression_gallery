@@ -1,6 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import '../widgets/art_image.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/artwork.dart';
 import '../services/art_api.dart';
@@ -304,7 +304,7 @@ class _GachaScreenState extends State<GachaScreen> with SingleTickerProviderStat
                   child: artwork.imageUrl != null
                       ? Hero(
                           tag: 'artwork_${artwork.id}',
-                          child: CachedNetworkImage(
+                          child: ArtImage(
                             imageUrl: artwork.imageUrl!,
                             fit: BoxFit.contain,
 
@@ -400,7 +400,7 @@ class _GachaScreenState extends State<GachaScreen> with SingleTickerProviderStat
               fit: StackFit.expand,
               children: [
                 if (artwork.imageUrl != null)
-                  CachedNetworkImage(
+                  ArtImage(
                     imageUrl: artwork.imageUrl!,
                     fit: BoxFit.cover,
 

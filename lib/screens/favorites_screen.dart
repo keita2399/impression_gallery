@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import '../widgets/art_image.dart';
 import '../models/artwork.dart';
 import '../services/art_api.dart';
 import '../services/firestore_service.dart';
@@ -179,7 +179,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                 if (artwork.imageUrl != null)
                   Hero(
                     tag: 'artwork_${artwork.id}',
-                    child: CachedNetworkImage(
+                    child: ArtImage(
                       imageUrl: artwork.imageUrl!,
                       fit: BoxFit.cover,
 

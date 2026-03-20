@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import '../widgets/art_image.dart';
 import '../models/artwork.dart';
 import '../services/art_api.dart';
 import '../services/translate_service.dart';
@@ -123,7 +123,7 @@ class _SearchScreenState extends State<SearchScreen> {
                       leading: ClipRRect(
                         borderRadius: BorderRadius.circular(8),
                         child: artwork.imageUrl != null
-                            ? CachedNetworkImage(
+                            ? ArtImage(
                                 imageUrl: artwork.imageUrl!,
                                 width: 60,
                                 height: 60,

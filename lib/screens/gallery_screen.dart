@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import '../widgets/art_image.dart';
 import 'package:share_plus/share_plus.dart';
 import '../models/artwork.dart';
 import '../services/art_api.dart';
@@ -368,7 +368,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
                                     ClipRRect(
                                       borderRadius: BorderRadius.circular(6),
                                       child: w.imageUrl != null
-                                          ? CachedNetworkImage(
+                                          ? ArtImage(
                                               imageUrl: w.imageUrl!,
                                               width: 44,
                                               height: 44,
@@ -481,7 +481,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
                 child: InteractiveViewer(
                   minScale: 1.0,
                   maxScale: 5.0,
-                  child: CachedNetworkImage(
+                  child: ArtImage(
                     imageUrl: artwork.imageUrl!,
                     fit: BoxFit.contain,
 
