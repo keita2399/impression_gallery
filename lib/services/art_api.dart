@@ -8,23 +8,36 @@ class ArtApi {
   /// Met Museum APIは画像URLを直接返すのでヘッダー不要
   static const imageHeaders = <String, String>{};
 
+  /// JSONレスポンスかどうか判定
+  static bool _isJson(String body) {
+    final trimmed = body.trimLeft();
+    return trimmed.startsWith('{') || trimmed.startsWith('[');
+  }
+
+  /// 安全にJSONデコード（失敗時はnull）
+  static dynamic _safeDecode(String body) {
+    if (!_isJson(body)) return null;
+    try {
+      return jsonDecode(body);
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// HTTP GETリクエスト（Imperva CDNチャレンジ対策付き）
-  /// HTMLが返ってきた場合は最大3回リトライ
+  /// JSONでないレスポンスが返ってきた場合は最大3回リトライ
   static Future<http.Response> _get(Uri url) async {
     for (var attempt = 0; attempt < 3; attempt++) {
-      final response = await http.get(url);
-      if (response.statusCode != 200) return response;
-
-      // Imperva CDNがHTMLチャレンジを返す場合の検出
-      final body = response.body.trimLeft();
-      if (body.startsWith('<') || body.startsWith('<!DOCTYPE')) {
-        // HTMLが返ってきた場合、少し待ってリトライ
+      try {
+        final response = await http.get(url);
+        if (response.statusCode != 200) return response;
+        if (_isJson(response.body)) return response;
+        // JSON以外（CDNチャレンジ等）の場合リトライ
         await Future.delayed(Duration(milliseconds: 500 * (attempt + 1)));
-        continue;
+      } catch (_) {
+        await Future.delayed(Duration(milliseconds: 500 * (attempt + 1)));
       }
-      return response;
     }
-    // 3回リトライしてもダメなら最後のレスポンスを返す
     return await http.get(url);
   }
 
@@ -41,22 +54,20 @@ class ArtApi {
     if (isPublicDomain) params['isPublicDomain'] = 'true';
     if (isHighlight) params['isHighlight'] = 'true';
     if (departmentId != null) params['departmentId'] = departmentId.toString();
-    // qは必須パラメータ
     params['q'] = query ?? '*';
 
     final url = Uri.parse('$_baseUrl/search').replace(queryParameters: params);
     final response = await _get(url);
 
     if (response.statusCode != 200) {
-      throw Exception('Failed to search: ${response.statusCode}');
+      throw Exception('検索に失敗しました (${response.statusCode})');
     }
 
-    final body = response.body.trimLeft();
-    if (body.startsWith('<')) {
-      throw Exception('API returned HTML instead of JSON (CDN block)');
+    final data = _safeDecode(response.body);
+    if (data == null) {
+      throw Exception('APIがブロックされています。しばらく待ってから再試行してください。');
     }
 
-    final data = jsonDecode(body);
     final List<dynamic>? ids = data['objectIDs'];
     return ids?.cast<int>() ?? [];
   }
@@ -64,17 +75,17 @@ class ArtApi {
   /// 作品詳細を取得
   static Future<Artwork?> fetchArtworkDetail(int id) async {
     final url = Uri.parse('$_baseUrl/objects/$id');
-    final response = await _get(url);
+    try {
+      final response = await _get(url);
+      if (response.statusCode != 200) return null;
 
-    if (response.statusCode != 200) return null;
+      final data = _safeDecode(response.body);
+      if (data == null || data['objectID'] == null) return null;
 
-    final body = response.body.trimLeft();
-    if (body.startsWith('<')) return null;
-
-    final data = jsonDecode(body);
-    if (data['objectID'] == null) return null;
-
-    return Artwork.fromJson(data as Map<String, dynamic>);
+      return Artwork.fromJson(data as Map<String, dynamic>);
+    } catch (_) {
+      return null;
+    }
   }
 
   /// メイン取得メソッド: ハイライト作品を並列取得
