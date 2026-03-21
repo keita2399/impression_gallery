@@ -7,7 +7,7 @@ const metConfig = AppConfig(
   splashIcon: '\u{1F3EB}', // 🏛
   themeColor: Color(0xFF8B0000),
   museumUrl: 'https://www.metmuseum.org/art/collection/search',
-  appUrl: 'https://impression-gallery.vercel.app',
+  appUrl: 'https://sanpo-met.vercel.app',
   hasTimeline: false,
   hasArtistProfiles: false,
   filterCategories: [

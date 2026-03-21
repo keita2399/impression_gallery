@@ -7,7 +7,7 @@ const aicConfig = AppConfig(
   splashIcon: '\u{1F3A8}', // 🎨
   themeColor: Color(0xFF1A237E),
   museumUrl: 'https://www.artic.edu/artworks',
-  appUrl: 'https://impressiongallery.vercel.app',
+  appUrl: 'https://sanpo-impressionist.vercel.app',
   hasTimeline: true,
   hasArtistProfiles: true,
   filterCategories: [
