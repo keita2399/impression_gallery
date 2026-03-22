@@ -5,6 +5,7 @@ import '../models/artwork.dart';
 import '../config/app_config.dart';
 import '../services/art_api.dart';
 import '../services/translate_service.dart';
+import '../widgets/bgm_fab.dart';
 import 'detail_screen.dart';
 
 class QuizScreen extends StatefulWidget {
@@ -389,6 +390,7 @@ class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
                 ),
               ),
             ),
+          const BgmFab(),
         ],
       ),
     );

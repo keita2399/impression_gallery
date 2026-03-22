@@ -12,6 +12,7 @@ import '../services/similar_works.dart';
 import '../services/stats_service.dart';
 import '../services/translate_service.dart';
 import '../services/tts_stub.dart' if (dart.library.js_interop) '../services/tts_web.dart';
+import '../widgets/bgm_fab.dart';
 import '../widgets/light_simulation_widget.dart';
 import 'artist_screen.dart';
 
@@ -628,6 +629,7 @@ class _DetailScreenState extends State<DetailScreen> {
               ),
             ),
           ],
+          const BgmFab(),
         ],
       ),
     );
@@ -956,6 +958,7 @@ class FullscreenZoomPageState extends State<FullscreenZoomPage>
               ),
             ),
           ],
+          const BgmFab(),
         ],
       ),
     );
