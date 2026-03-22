@@ -123,16 +123,18 @@ class MetApi extends ArtApi {
   }
 
   Future<List<Artwork>> _fetchArtworksByIds(List<int> ids, {int limit = 80}) async {
-    final targetIds = ids.take(limit).toList();
+    // IDをシャッフルして偏りを防ぐ
+    final targetIds = ids.toList()..shuffle();
     final artworks = <Artwork>[];
 
-    for (var i = 0; i < targetIds.length; i += 10) {
-      final batch = targetIds.skip(i).take(10);
+    for (var i = 0; i < targetIds.length && artworks.length < limit; i += 5) {
+      final batch = targetIds.skip(i).take(5);
       final futures = batch.map((id) => fetchArtworkDetail(id));
       final results = await Future.wait(futures);
       for (final artwork in results) {
         if (artwork != null && artwork.imageUrl != null && artwork.imageUrl!.isNotEmpty) {
           artworks.add(artwork);
+          if (artworks.length >= limit) break;
         }
       }
     }
