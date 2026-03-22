@@ -25,10 +25,9 @@ ORDER BY ?inception
 ''';
 
     try {
-      final url = Uri.parse(_sparqlEndpoint).replace(queryParameters: {
-        'query': query,
-        'format': 'json',
-      });
+      final url = Uri.parse(
+        '$_sparqlEndpoint?format=json&query=${Uri.encodeComponent(query)}',
+      );
 
       final response = await http.get(url, headers: {
         'Accept': 'application/json',
