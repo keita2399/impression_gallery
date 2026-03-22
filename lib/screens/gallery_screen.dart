@@ -4,7 +4,6 @@ import 'package:share_plus/share_plus.dart';
 import '../config/app_config.dart';
 import '../models/artwork.dart';
 import '../services/art_api.dart';
-import '../services/bgm_service.dart';
 import '../services/firestore_service.dart';
 import '../services/translate_service.dart';
 import 'detail_screen.dart';
@@ -206,15 +205,6 @@ class _GalleryScreenState extends State<GalleryScreen> {
                     ),
                     Row(
                       children: [
-                        _iconButton(
-                          icon: BgmService.instance.isPlaying ? Icons.music_note : Icons.music_off,
-                          isActive: BgmService.instance.isPlaying,
-                          onTap: () async {
-                            await BgmService.instance.toggle();
-                            setState(() {});
-                          },
-                        ),
-                        const SizedBox(width: 8),
                         _iconButton(
                           icon: Icons.search,
                           isActive: _panelOpen,
