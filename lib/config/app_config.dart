@@ -19,6 +19,9 @@ class AppConfig {
   /// アーティストプロフィール画面を持つか
   final bool hasArtistProfiles;
 
+  /// 作品の呼称（「名画」or「名作」等）
+  final String artworkLabel;
+
   const AppConfig({
     required this.appName,
     required this.appNameEn,
@@ -29,6 +32,7 @@ class AppConfig {
     this.filterCategories = const [],
     this.hasTimeline = false,
     this.hasArtistProfiles = false,
+    this.artworkLabel = '名作',
   });
 }
 

@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import '../widgets/art_image.dart';
 import '../models/artwork.dart';
+import '../config/app_config.dart';
 import '../services/art_api.dart';
 import '../services/translate_service.dart';
 import 'detail_screen.dart';
@@ -177,7 +178,7 @@ class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
           icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text('名画クイズ', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: Text('${appConfig.artworkLabel}クイズ', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         actions: [
           // Score badge with bounce
           Padding(

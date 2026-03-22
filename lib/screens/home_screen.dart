@@ -199,7 +199,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           children: [
             CircularProgressIndicator(color: appConfig.themeColor),
             const SizedBox(height: 16),
-            Text('今日の名画を探しています...', style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 14)),
+            Text('今日の${appConfig.artworkLabel}を探しています...', style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 14)),
           ],
         ),
       );
@@ -272,13 +272,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     color: Colors.white.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: const Row(
+                  child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.palette, color: Colors.white70, size: 16),
-                      SizedBox(width: 6),
-                      Text("今日の名画",
-                          style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w500)),
+                      const Icon(Icons.palette, color: Colors.white70, size: 16),
+                      const SizedBox(width: 6),
+                      Text('今日の${appConfig.artworkLabel}',
+                          style: const TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w500)),
                     ],
                   ),
                 ),

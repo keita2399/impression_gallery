@@ -10,6 +10,7 @@ const aicConfig = AppConfig(
   appUrl: 'https://sanpo-impressionist.vercel.app',
   hasTimeline: true,
   hasArtistProfiles: true,
+  artworkLabel: '名画',
   filterCategories: [
     FilterCategory(label: 'すべて'),
     FilterCategory(label: 'クロード・モネ', query: 'Claude Monet'),

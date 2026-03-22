@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../widgets/art_image.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/artwork.dart';
+import '../config/app_config.dart';
 import '../services/art_api.dart';
 import '../services/firestore_service.dart';
 import '../services/translate_service.dart';
@@ -138,9 +139,9 @@ class _GachaScreenState extends State<GachaScreen> with SingleTickerProviderStat
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Text(
-                '今日の名画ガチャ',
-                style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold),
+              Text(
+                '今日の${appConfig.artworkLabel}ガチャ',
+                style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold),
               ),
             ],
           ),
@@ -149,7 +150,7 @@ class _GachaScreenState extends State<GachaScreen> with SingleTickerProviderStat
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
-                '毎日ひとつ、新しい名画と出会おう',
+                '毎日ひとつ、新しい${appConfig.artworkLabel}と出会おう',
                 style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 14),
               ),
               const SizedBox(width: 12),
@@ -260,7 +261,7 @@ class _GachaScreenState extends State<GachaScreen> with SingleTickerProviderStat
             ),
             const SizedBox(height: 24),
             Text(
-              'タップして今日の名画を引こう',
+              'タップして今日の${appConfig.artworkLabel}を引こう',
               style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 13),
             ),
           ],
