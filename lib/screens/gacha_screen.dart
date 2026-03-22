@@ -146,38 +146,49 @@ class _GachaScreenState extends State<GachaScreen> with SingleTickerProviderStat
             ],
           ),
           const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                '毎日ひとつ、新しい${appConfig.artworkLabel}と出会おう',
-                style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 14),
-              ),
-              const SizedBox(width: 12),
-              MouseRegion(
-                cursor: SystemMouseCursors.click,
-                child: GestureDetector(
-                onTap: () {
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const QuizScreen()));
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.amber.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.quiz, color: Colors.amber, size: 14),
-                      SizedBox(width: 4),
-                      Text('クイズ', style: TextStyle(color: Colors.amber, fontSize: 12, fontWeight: FontWeight.bold)),
-                    ],
-                  ),
-                ),
-              )),
-            ],
+          Text(
+            '毎日ひとつ、新しい${appConfig.artworkLabel}と出会おう',
+            style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 14),
+          ),
+          // クイズボタン（ガチャを引いた後にアニメーション付きで表示）
+          AnimatedSize(
+            duration: const Duration(milliseconds: 400),
+            curve: Curves.easeOut,
+            child: _alreadyDrawnToday
+                ? Padding(
+                    padding: const EdgeInsets.only(top: 12),
+                    child: MouseRegion(
+                      cursor: SystemMouseCursors.click,
+                      child: GestureDetector(
+                        onTap: () {
+                          Navigator.push(context, MaterialPageRoute(builder: (_) => const QuizScreen()));
+                        },
+                        child: TweenAnimationBuilder<double>(
+                          tween: Tween(begin: 0.0, end: 1.0),
+                          duration: const Duration(milliseconds: 600),
+                          curve: Curves.elasticOut,
+                          builder: (context, value, child) => Transform.scale(scale: value, child: child),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: Colors.amber.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: Colors.amber.withValues(alpha: 0.4)),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.quiz, color: Colors.amber, size: 16),
+                                SizedBox(width: 6),
+                                Text('クイズに挑戦！', style: TextStyle(color: Colors.amber, fontSize: 13, fontWeight: FontWeight.bold)),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  )
+                : const SizedBox.shrink(),
           ),
           if (_history.isNotEmpty) ...[
             const SizedBox(height: 12),
@@ -323,23 +334,17 @@ class _GachaScreenState extends State<GachaScreen> with SingleTickerProviderStat
                 ),
               ),
               const SizedBox(height: 20),
-              if (_translatedTitle != null) ...[
-                Text(
-                  _translatedTitle!,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
-                ),
+              Text(
+                _translatedTitle ?? artwork.title,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              if (_translatedTitle != null && _translatedTitle != artwork.title) ...[
                 const SizedBox(height: 4),
                 Text(
                   artwork.title,
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 12, fontStyle: FontStyle.italic),
-                ),
-              ] else ...[
-                Text(
-                  artwork.title,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                  style: TextStyle(color: Colors.white.withValues(alpha: 0.3), fontSize: 11, fontStyle: FontStyle.italic),
                 ),
               ],
               const SizedBox(height: 8),
