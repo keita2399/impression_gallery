@@ -163,9 +163,6 @@ class Artwork {
 
   static String? _aicImageUrl(String? imageId, int width) {
     if (imageId == null) return null;
-    if (kIsWeb) {
-      return 'https://www.artic.edu/iiif/2/$imageId/full/$width,/0/default.jpg';
-    }
     return '$_aicProxy?id=$imageId&w=$width';
   }
 }
