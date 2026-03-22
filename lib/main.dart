@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'config/app_config.dart';
@@ -20,14 +21,18 @@ void startApp() {
   WidgetsFlutterBinding.ensureInitialized();
   initInstallPrompt();
 
+  // スプラッシュを即座に削除
+  removeSplash();
+
   final artworkId = _getArtworkIdFromUrl();
 
-  // スプラッシュを即座に削除（Flutterが描画を開始した時点で不要）
-  WidgetsBinding.instance.addPostFrameCallback((_) {
-    removeSplash();
+  // 全ての未処理エラーをキャッチ（スプラッシュにエラーが出るのを防止）
+  runZonedGuarded(() {
+    runApp(GalleryApp(artworkId: artworkId));
+  }, (error, stack) {
+    // 未処理エラーは無視（各画面のtry-catchでUI表示される）
+    debugPrint('Uncaught error: $error');
   });
-
-  runApp(GalleryApp(artworkId: artworkId));
 }
 
 class GalleryApp extends StatelessWidget {
