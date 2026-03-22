@@ -45,13 +45,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   Future<void> _loadTodayArtwork() async {
     try {
-      final works = await artApi.fetchHighlights(limit: 10);
+      final works = await artApi.fetchHighlights(limit: 1);
       if (works.isEmpty) {
         setState(() { _error = '作品が見つかりません'; _loading = false; });
         return;
       }
-      final dayIndex = DateTime.now().day % works.length;
-      final artwork = works[dayIndex];
+      final artwork = works[0];
       if (mounted) {
         setState(() {
           _todayArtwork = artwork;
