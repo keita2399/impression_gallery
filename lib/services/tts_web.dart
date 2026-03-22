@@ -17,7 +17,7 @@ Future<void> speakText(String text) async {
       body: jsonEncode({'text': text}),
     );
 
-    if (response.statusCode == 200) {
+    if (response.statusCode == 200 && response.body.trimLeft().startsWith('{')) {
       final data = jsonDecode(response.body);
       final audioBase64 = data['audioContent'] as String;
       // Play audio via HTML Audio element

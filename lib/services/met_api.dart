@@ -38,19 +38,21 @@ class MetApi extends ArtApi {
     }
   }
 
-  /// CDNチャレンジ対策付きGETリクエスト
+  /// CDNチャレンジ対策付きGETリクエスト（タイムアウト10秒）
   static Future<http.Response> _get(Uri url) async {
-    for (var attempt = 0; attempt < 3; attempt++) {
+    for (var attempt = 0; attempt < 2; attempt++) {
       try {
-        final response = await http.get(url);
+        final response = await http.get(url).timeout(const Duration(seconds: 10));
         if (response.statusCode != 200) return response;
         if (_isJson(response.body)) return response;
         await Future.delayed(Duration(milliseconds: 500 * (attempt + 1)));
       } catch (_) {
-        await Future.delayed(Duration(milliseconds: 500 * (attempt + 1)));
+        if (attempt == 0) {
+          await Future.delayed(const Duration(milliseconds: 500));
+        }
       }
     }
-    return await http.get(url);
+    return await http.get(url).timeout(const Duration(seconds: 10));
   }
 
   Future<List<int>> searchObjectIds({

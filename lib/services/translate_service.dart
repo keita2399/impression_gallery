@@ -40,10 +40,13 @@ class TranslateService {
         'https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=ja&dt=t&q=$encoded',
       );
 
-      final response = await http.get(url);
+      final response = await http.get(url).timeout(const Duration(seconds: 5));
       if (response.statusCode != 200) return text;
 
-      final data = jsonDecode(response.body);
+      final body = response.body.trimLeft();
+      if (!body.startsWith('[') && !body.startsWith('{')) return text;
+
+      final data = jsonDecode(body);
       final sentences = data[0] as List<dynamic>;
       final translated = sentences.map((s) => s[0] as String).join();
 
