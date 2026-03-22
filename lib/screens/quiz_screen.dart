@@ -109,9 +109,7 @@ class _QuizScreenState extends State<QuizScreen> with TickerProviderStateMixin {
     _particles = [];
 
     // 初回はガチャの作品を使用、以降はランダム
-    final work = (firstWork != null && firstWork.artist.isNotEmpty && firstWork.artist != 'Unknown')
-        ? firstWork
-        : _allWorks[_random.nextInt(_allWorks.length)];
+    final work = firstWork ?? _allWorks[_random.nextInt(_allWorks.length)];
     final correctArtist = work.artist;
 
     final otherArtists = _allWorks
