@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'app_config.dart';
 
 const metConfig = AppConfig(
-  appName: 'メトロポリタンさんぽ',
+  appName: 'メトロポリタン美術館さんぽ',
   appNameEn: 'Metropolitan Museum Walk',
   splashIcon: '\u{1F3EB}', // 🏛
   themeColor: Color(0xFF8B0000),
