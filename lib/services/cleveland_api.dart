@@ -3,9 +3,9 @@ import 'package:http/http.dart' as http;
 import '../models/artwork.dart';
 import 'art_api.dart';
 
-/// Cleveland Museum of Art API実装
+/// Cleveland Museum of Art API実装（プロキシ経由）
 class ClevelandApi extends ArtApi {
-  static const _baseUrl = 'https://openaccess-api.clevelandart.org/api/artworks';
+  static const _baseUrl = 'https://impressionist-bot.vercel.app/api/cleveland';
 
   @override
   Map<String, String> get imageHeaders => const {};
