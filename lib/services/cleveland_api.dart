@@ -101,8 +101,15 @@ class ClevelandApi extends ArtApi {
     String? imageUrlHigh;
 
     if (images != null) {
-      imageUrl = (images['web'] as Map<String, dynamic>?)?['url'] as String?;
-      imageUrlHigh = (images['print'] as Map<String, dynamic>?)?['url'] as String? ?? imageUrl;
+      final webUrl = (images['web'] as Map<String, dynamic>?)?['url'] as String?;
+      final printUrl = (images['print'] as Map<String, dynamic>?)?['url'] as String?;
+      // CDN画像もCORSなしのためプロキシ経由
+      imageUrl = webUrl != null
+          ? 'https://impressionist-bot.vercel.app/api/image?met=${Uri.encodeComponent(webUrl)}'
+          : null;
+      imageUrlHigh = printUrl != null
+          ? 'https://impressionist-bot.vercel.app/api/image?met=${Uri.encodeComponent(printUrl)}'
+          : imageUrl;
     }
 
     return Artwork(
