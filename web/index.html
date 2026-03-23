@@ -17,20 +17,20 @@
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="google" content="notranslate">
-  <meta name="description" content="メトロポリタン美術館の名作を光で楽しむインタラクティブギャラリー">
+  <meta name="description" content="恐竜・宇宙・歴史 — スミソニアン博物館のコレクションを楽しむギャラリー">
   <meta name="theme-color" content="#121218">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="メトロポリタンさんぽ">
+  <meta name="apple-mobile-web-app-title" content="スミソニアン博物館さんぽ">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png">
 
-  <title>メトロポリタンさんぽ</title>
+  <title>スミソニアン博物館さんぽ</title>
   <link rel="manifest" href="manifest.json">
   
   
@@ -61,10 +61,13 @@
     }
 
     #splash .splash-icon {
-      font-size: 64px;
       margin-bottom: 24px;
-      opacity: 0.9;
       animation: pulse 2s ease-in-out infinite;
+    }
+
+    #splash .splash-icon svg {
+      width: 72px;
+      height: 72px;
     }
 
     #splash .splash-title {
@@ -87,7 +90,7 @@
     #splash .splash-accent {
       width: 40px;
       height: 3px;
-      background-color: #8B0000;
+      background-color: #1B5E20;
       border-radius: 2px;
       margin: 16px 0;
     }
@@ -97,7 +100,7 @@
       width: 24px;
       height: 24px;
       border: 2px solid rgba(255, 255, 255, 0.15);
-      border-top-color: #8B0000;
+      border-top-color: #1B5E20;
       border-radius: 50%;
       animation: spin 0.8s linear infinite;
     }
@@ -121,10 +124,11 @@
 </head>
 <body>
   <div id="splash" aria-hidden="true">
-    <div class="splash-icon">&#127963;</div>
-    <div class="splash-title">メトロポリタンさんぽ</div>
+    <div class="splash-icon" style="font-size:64px;">🦖</div>
+    <div class="splash-title">スミソニアン博物館さんぽ</div>
     <div class="splash-accent"></div>
-    <div class="splash-subtitle">Metropolitan Museum Walk</div>
+    <div class="splash-subtitle" style="margin-bottom:8px;">恐竜・宇宙・歴史・宝石...</div>
+    <div class="splash-subtitle">Smithsonian Walk</div>
     <div class="splash-loader"></div>
   </div>
   
@@ -151,24 +155,7 @@
       }
     }
   </script>
-  <script src="flutter_bootstrap.js" async=""
-    onerror="document.getElementById('splash').innerHTML='<p style=color:red>bootstrap.js failed to load</p>'"
-  ></script>
-  <script>
-    // Flutterエラーをスプラッシュ画面に表示
-    window.addEventListener('error', function(e) {
-      var splash = document.getElementById('splash');
-      if (splash) {
-        splash.innerHTML += '<p style="color:red;font-size:12px;max-width:80%;word-break:break-all;margin-top:20px">' + e.message + '<br>' + (e.filename || '') + ':' + (e.lineno || '') + '</p>';
-      }
-    });
-    window.addEventListener('unhandledrejection', function(e) {
-      var splash = document.getElementById('splash');
-      if (splash) {
-        splash.innerHTML += '<p style="color:orange;font-size:12px;max-width:80%;word-break:break-all;margin-top:20px">Promise rejected: ' + e.reason + '</p>';
-      }
-    });
-  </script>
+  <script src="flutter_bootstrap.js" async=""></script>
 
 
 </body></html>
