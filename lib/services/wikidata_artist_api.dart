@@ -23,7 +23,22 @@ class WikidataArtistApi extends ArtApi {
   @override
   Map<String, String> get imageHeaders => const {};
 
-  static String _toImageUrl(String url) {
+  /// Convert to proxied thumbnail URL (1200px) for list/gallery views
+  static String _toThumbUrl(String url) {
+    if (url.startsWith('http://')) {
+      url = 'https://${url.substring(7)}';
+    }
+    if (url.contains('upload.wikimedia.org') && !url.contains('/thumb/')) {
+      final uri = Uri.parse(url);
+      final fileName = uri.pathSegments.last;
+      final thumbPath = uri.path.replaceFirst('/commons/', '/commons/thumb/');
+      url = '${uri.scheme}://${uri.host}$thumbPath/1200px-$fileName';
+    }
+    return 'https://impressionist-bot.vercel.app/api/image?met=${Uri.encodeComponent(url)}';
+  }
+
+  /// Convert to proxied full-size URL for detail/zoom views
+  static String _toFullUrl(String url) {
     if (url.startsWith('http://')) {
       url = 'https://${url.substring(7)}';
     }
@@ -77,6 +92,8 @@ ORDER BY ?inception
         final description = b['paintingDescription']?['value'] as String?;
 
         if (imageUrl == null) continue;
+        // Skip items without proper labels (shows as QID)
+        if (title.startsWith('Q') && RegExp(r'^Q\d+$').hasMatch(title)) continue;
 
         artworks.add(Artwork(
           id: id.hashCode.abs(),
@@ -86,8 +103,8 @@ ORDER BY ?inception
           description: description,
           medium: collection != null ? '所蔵: $collection' : null,
           placeOfOrigin: artistCountry,
-          imageUrl: _toImageUrl(imageUrl),
-          imageUrlHigh: _toImageUrl(imageUrl),
+          imageUrl: _toThumbUrl(imageUrl),
+          imageUrlHigh: _toFullUrl(imageUrl),
         ));
       }
 

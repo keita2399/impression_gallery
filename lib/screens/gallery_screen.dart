@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../widgets/art_image.dart';
 import 'package:share_plus/share_plus.dart';
@@ -171,7 +172,9 @@ class _GalleryScreenState extends State<GalleryScreen> {
         Expanded(
           child: Stack(
             children: [
-              PageView.builder(
+              MouseRegion(
+              cursor: SystemMouseCursors.grab,
+              child: PageView.builder(
                 controller: _pageController,
                 scrollDirection: Axis.vertical,
                 itemCount: _artworks.length,
@@ -183,7 +186,7 @@ class _GalleryScreenState extends State<GalleryScreen> {
                   }
                 },
                 itemBuilder: (context, index) => _buildArtworkPage(_artworks[index], index),
-              ),
+              )),
               // Top bar
               Positioned(
                 top: 50,

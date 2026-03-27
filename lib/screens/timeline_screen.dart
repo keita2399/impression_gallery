@@ -164,11 +164,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
                   );
                 }
               },
-              child: ScrollConfiguration(
-                behavior: ScrollConfiguration.of(context).copyWith(dragDevices: {
-                  PointerDeviceKind.touch, PointerDeviceKind.mouse,
-                }),
-                child: ListView.builder(
+              child: ListView.builder(
                   controller: _scrollController,
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 8),
@@ -213,7 +209,6 @@ class _TimelineScreenState extends State<TimelineScreen> {
                     );
                   },
                 ),
-              ),
             ),
           ),
         ),

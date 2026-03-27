@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'config/app_config.dart';
@@ -6,6 +7,15 @@ import 'services/art_api.dart';
 import 'screens/home_screen.dart';
 import 'screens/detail_screen.dart';
 import 'widgets/install_prompt_stub.dart' if (dart.library.js_interop) 'widgets/install_prompt_web.dart';
+
+/// Enable mouse drag scrolling on web (all scroll views)
+class WebScrollBehavior extends MaterialScrollBehavior {
+  @override
+  Set<PointerDeviceKind> get dragDevices => {
+    PointerDeviceKind.touch,
+    PointerDeviceKind.mouse,
+  };
+}
 
 int? _getArtworkIdFromUrl() {
   if (!kIsWeb) return null;
@@ -44,6 +54,7 @@ class GalleryApp extends StatelessWidget {
     return MaterialApp(
       title: appConfig.appName,
       debugShowCheckedModeBanner: false,
+      scrollBehavior: WebScrollBehavior(),
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
           seedColor: appConfig.themeColor,
