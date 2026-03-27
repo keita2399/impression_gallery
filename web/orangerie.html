@@ -136,31 +136,25 @@
     renderer.physicallyCorrectLights = true;
     document.body.appendChild(renderer.domElement);
 
-    // --- Load Blender model ---
+    // --- Load Blender model (keep all baked materials as-is) ---
     const gltfLoader = new GLTFLoader();
     gltfLoader.load('orangerie_room.glb', (gltf) => {
       const model = gltf.scene;
-      // Rotate to match Three.js coordinate system (Blender Y-up -> Three.js Y-up already handled by glTF)
       scene.add(model);
-
-      // Enable shadows on all meshes
       model.traverse((child) => {
         if (child.isMesh) {
           child.receiveShadow = true;
           child.castShadow = true;
         }
       });
-
-      console.log('Blender model loaded');
     });
 
-    // --- Lighting (in Three.js since glTF doesn't support area lights) ---
+    // --- Lighting (original balanced setup from orangerie2) ---
     // Soft ambient
     const ambient = new THREE.AmbientLight(0xf0ece6, 0.6);
     scene.add(ambient);
 
-    // Main skylight area light simulation — multiple point lights in oval pattern
-    const skylightLights = [];
+    // Main skylight — multiple point lights in oval pattern
     for (let i = 0; i < 8; i++) {
       const angle = (i / 8) * Math.PI * 2;
       const x = Math.cos(angle) * RADIUS_X * 0.35;
@@ -171,7 +165,6 @@
       pl.shadow.mapSize.set(512, 512);
       pl.shadow.bias = -0.001;
       scene.add(pl);
-      skylightLights.push(pl);
     }
 
     // Center bright light
@@ -181,7 +174,7 @@
     centerLight.shadow.mapSize.set(1024, 1024);
     scene.add(centerLight);
 
-    // Wall wash lights — illuminate paintings from above
+    // Wall wash spotlights — illuminate paintings from above
     for (let i = 0; i < 12; i++) {
       const angle = (i / 12) * Math.PI * 2;
       const x = Math.cos(angle) * RADIUS_X * 0.85;
@@ -196,6 +189,43 @@
     // Hemisphere for natural sky fill
     const hemi = new THREE.HemisphereLight(0xf5f0ea, 0x9a9488, 0.4);
     scene.add(hemi);
+
+    // --- Ceiling gradient overlay (dark edge → lighter toward skylight) ---
+    // Concentric oval rings layered just below Blender ceiling
+    const ceilingRings = [
+      { scale: 1.0,  color: 0x9a9088 },  // Outermost — darkest (wall edge)
+      { scale: 0.92, color: 0xa8a098 },
+      { scale: 0.84, color: 0xb5ada5 },
+      { scale: 0.76, color: 0xc2bab2 },
+      { scale: 0.68, color: 0xcfc8c0 },
+    ];
+    ceilingRings.forEach((ring, idx) => {
+      const shape = new THREE.Shape();
+      for (let i = 0; i <= 64; i++) {
+        const angle = (i / 64) * Math.PI * 2;
+        const x = Math.cos(angle) * (RADIUS_X * ring.scale);
+        const z = Math.sin(angle) * (RADIUS_Z * ring.scale);
+        if (i === 0) shape.moveTo(x, z); else shape.lineTo(x, z);
+      }
+      const geo = new THREE.ShapeGeometry(shape);
+      const mat = new THREE.MeshStandardMaterial({ color: ring.color, roughness: 1.0 });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.rotation.x = Math.PI / 2;
+      mesh.position.y = ROOM_HEIGHT - 0.01 - idx * 0.003;
+      scene.add(mesh);
+    });
+
+    // Ceiling spot fixture dots (small dark spheres, decorative only)
+    for (let i = 0; i < 24; i++) {
+      const angle = (i / 24) * Math.PI * 2;
+      const x = Math.cos(angle) * RADIUS_X * 0.82;
+      const z = Math.sin(angle) * RADIUS_Z * 0.82;
+      const dotGeo = new THREE.SphereGeometry(0.03, 8, 8);
+      const dotMat = new THREE.MeshBasicMaterial({ color: 0x333333 });
+      const dot = new THREE.Mesh(dotGeo, dotMat);
+      dot.position.set(x, ROOM_HEIGHT - 0.02, z);
+      scene.add(dot);
+    }
 
     // --- OrbitControls ---
     const orbitControls = new OrbitControls(camera, renderer.domElement);
@@ -286,10 +316,10 @@
 
         // Gold frame with thickness (top, bottom, and side edges)
         const frameMat = new THREE.MeshStandardMaterial({ color: 0xc0a060, metalness: 0.7, roughness: 0.3 });
-        const frameThickness = 0.04; // depth
-        const frameWidth = 0.05; // width of frame bar
+        const frameThickness = 0.04;
+        const frameWidth = 0.05;
 
-        // Top and bottom curved frame bars
+        // Top and bottom curved frame bars with rectangular cross-section
         [panelY + panelHeight/2, panelY - panelHeight/2].forEach(fy => {
           const pts = [];
           for (let s = 0; s <= SEGMENTS; s++) {
@@ -301,15 +331,13 @@
             ));
           }
           const curve = new THREE.CatmullRomCurve3(pts);
-          // Rectangular cross-section using ExtrudeGeometry
           const shape = new THREE.Shape();
           shape.moveTo(-frameWidth/2, -frameThickness/2);
           shape.lineTo(frameWidth/2, -frameThickness/2);
           shape.lineTo(frameWidth/2, frameThickness/2);
           shape.lineTo(-frameWidth/2, frameThickness/2);
           shape.closePath();
-          const extrudeSettings = { steps: SEGMENTS, extrudePath: curve };
-          const frameGeo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+          const frameGeo = new THREE.ExtrudeGeometry(shape, { steps: SEGMENTS, extrudePath: curve });
           group.add(new THREE.Mesh(frameGeo, frameMat));
         });
 
@@ -320,7 +348,6 @@
           const barGeo = new THREE.BoxGeometry(frameWidth, panelHeight + frameWidth, frameThickness);
           const bar = new THREE.Mesh(barGeo, frameMat);
           bar.position.set(x, panelY, z);
-          // Face inward
           const nx = -Math.cos(angle);
           const nz = -Math.sin(angle);
           bar.rotation.y = Math.atan2(nx, nz);
