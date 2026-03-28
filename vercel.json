@@ -27,6 +27,12 @@
       ]
     },
     {
+      "source": "/orangerie.html",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-cache, must-revalidate" }
+      ]
+    },
+    {
       "source": "/audio/(.*)",
       "headers": [
         { "key": "Cache-Control", "value": "public, max-age=604800" }

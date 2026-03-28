@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:ui' as ui;
 import 'package:http/http.dart' as http;
 import '../models/artwork.dart';
 import 'art_api.dart';
@@ -11,6 +12,7 @@ class WikidataArtistApi extends ArtApi {
   final String artistCountry;  // 国 (例: オランダ)
   final Map<String, bool Function(Artwork)>? filters; // カスタムフィルター
 
+  static const _sparqlDirect = 'https://query.wikidata.org/sparql';
   static const _sparqlProxy = 'https://impressionist-bot.vercel.app/api/sparql';
 
   WikidataArtistApi({
@@ -23,16 +25,27 @@ class WikidataArtistApi extends ArtApi {
   @override
   Map<String, String> get imageHeaders => const {};
 
-  /// Convert to proxied thumbnail URL (1200px) for list/gallery views
+  /// Get optimal thumbnail width based on device screen
+  static int _optimalThumbWidth() {
+    final view = ui.PlatformDispatcher.instance.implicitView;
+    if (view == null) return 800;
+    final logicalWidth = view.physicalSize.width / view.devicePixelRatio;
+    final pixelWidth = (logicalWidth * view.devicePixelRatio).round();
+    // Clamp between 400 and 1600
+    return pixelWidth.clamp(400, 1600);
+  }
+
+  /// Convert to proxied thumbnail URL (device-adaptive size) for list/gallery views
   static String _toThumbUrl(String url) {
     if (url.startsWith('http://')) {
       url = 'https://${url.substring(7)}';
     }
     if (url.contains('upload.wikimedia.org') && !url.contains('/thumb/')) {
+      final width = _optimalThumbWidth();
       final uri = Uri.parse(url);
       final fileName = uri.pathSegments.last;
       final thumbPath = uri.path.replaceFirst('/commons/', '/commons/thumb/');
-      url = '${uri.scheme}://${uri.host}$thumbPath/1200px-$fileName';
+      url = '${uri.scheme}://${uri.host}$thumbPath/${width}px-$fileName';
     }
     return 'https://impressionist-bot.vercel.app/api/image?met=${Uri.encodeComponent(url)}';
   }
@@ -59,11 +72,20 @@ ORDER BY ?inception
 ''';
 
     try {
-      final url = Uri.parse(
+      // Try direct Wikidata first, fallback to proxy
+      final directUrl = Uri.parse(
+        '$_sparqlDirect?format=json&query=${Uri.encodeComponent(query.trim())}',
+      );
+      final proxyUrl = Uri.parse(
         '$_sparqlProxy?query=${Uri.encodeComponent(query.trim())}',
       );
 
-      final response = await http.get(url).timeout(const Duration(seconds: 20));
+      http.Response response;
+      try {
+        response = await http.get(directUrl).timeout(const Duration(seconds: 15));
+      } catch (_) {
+        response = await http.get(proxyUrl).timeout(const Duration(seconds: 20));
+      }
 
       if (response.statusCode != 200) return [];
 

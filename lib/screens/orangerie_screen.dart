@@ -10,6 +10,8 @@ class OrangerieScreen extends StatefulWidget {
 }
 
 class _OrangerieScreenState extends State<OrangerieScreen> {
+  // Unique view type per build to bust cache
+  static final _viewType = 'orangerie-iframe-${DateTime.now().millisecondsSinceEpoch}';
   static bool _registered = false;
 
   @override
@@ -17,10 +19,11 @@ class _OrangerieScreenState extends State<OrangerieScreen> {
     super.initState();
     if (!_registered) {
       ui_web.platformViewRegistry.registerViewFactory(
-        'orangerie-iframe',
+        _viewType,
         (int viewId) {
+          final cacheBuster = DateTime.now().millisecondsSinceEpoch;
           final iframe = html.IFrameElement()
-            ..src = 'orangerie.html'
+            ..src = 'orangerie.html?v=$cacheBuster'
             ..style.border = 'none'
             ..style.width = '100%'
             ..style.height = '100%'
@@ -35,6 +38,6 @@ class _OrangerieScreenState extends State<OrangerieScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return const HtmlElementView(viewType: 'orangerie-iframe');
+    return HtmlElementView(viewType: _viewType);
   }
 }
