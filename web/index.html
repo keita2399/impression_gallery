@@ -1,39 +1,26 @@
 <!DOCTYPE html><html lang="ja" translate="no"><head>
-  <!--
-    If you are serving your web app in a path other than the root, change the
-    href value below to reflect the base path you are serving from.
-
-    The path provided below has to start and end with a slash "/" in order for
-    it to work correctly.
-
-    For more details:
-    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
-
-    This is a placeholder for base href that will be replaced by the value of
-    the `--base-href` argument provided to `flutter build`.
-  -->
   <base href="$FLUTTER_BASE_HREF">
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="google" content="notranslate">
-  <meta name="description" content="メトロポリタン美術館の名作を光で楽しむインタラクティブギャラリー">
-  <meta name="theme-color" content="#8B0000">
+  <meta name="description" content="モネ全作品を楽しむインタラクティブギャラリー">
+  <meta name="theme-color" content="#5C6BC0">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="メトロポリタン美術館さんぽ">
+  <meta name="apple-mobile-web-app-title" content="モネさんぽ">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
 
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="favicon.png">
 
-  <title>メトロポリタン美術館さんぽ</title>
+  <title>モネさんぽ</title>
   <link rel="manifest" href="manifest.json">
-  
-  
+
+
   <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">
   <style id="splash-screen-style">
     html {
@@ -90,7 +77,7 @@
     #splash .splash-accent {
       width: 40px;
       height: 3px;
-      background-color: #8B0000;
+      background-color: #5C6BC0;
       border-radius: 2px;
       margin: 16px 0;
     }
@@ -100,7 +87,7 @@
       width: 24px;
       height: 24px;
       border: 2px solid rgba(255, 255, 255, 0.15);
-      border-top-color: #8B0000;
+      border-top-color: #5C6BC0;
       border-radius: 50%;
       animation: spin 0.8s linear infinite;
     }
@@ -124,21 +111,13 @@
 </head>
 <body>
   <div id="splash" aria-hidden="true">
-    <div class="splash-icon"><svg viewBox="0 0 100 80" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M50 5L5 30V35H95V30L50 5Z" fill="rgba(255,255,255,0.8)"/><rect x="12" y="38" width="8" height="30" rx="2" fill="rgba(255,255,255,0.6)"/><rect x="28" y="38" width="8" height="30" rx="2" fill="rgba(255,255,255,0.6)"/><rect x="46" y="38" width="8" height="30" rx="2" fill="rgba(255,255,255,0.6)"/><rect x="64" y="38" width="8" height="30" rx="2" fill="rgba(255,255,255,0.6)"/><rect x="80" y="38" width="8" height="30" rx="2" fill="rgba(255,255,255,0.6)"/><rect x="5" y="70" width="90" height="6" rx="2" fill="rgba(255,255,255,0.7)"/></svg></div>
-    <div class="splash-title">メトロポリタン美術館さんぽ</div>
+    <div class="splash-icon" style="font-size:64px;">🌸</div>
+    <div class="splash-title">モネさんぽ</div>
     <div class="splash-accent"></div>
-    <div class="splash-subtitle">Metropolitan Museum Walk</div>
+    <div class="splash-subtitle">Monet Walk — 全作品コレクション</div>
     <div class="splash-loader"></div>
   </div>
-  
-  <!--
-    You can customize the "flutter_bootstrap.js" script.
-    This is useful to provide a custom configuration to the Flutter loader
-    or to give the user feedback during the initialization process.
 
-    For more details:
-    * https://docs.flutter.dev/platform-integration/web/initialization
-  -->
   <script>
     // 古いService Workerのキャッシュをクリア
     if ('serviceWorker' in navigator) {
