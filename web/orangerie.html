@@ -26,17 +26,6 @@
       border-radius: 50%; animation: spin 1.5s linear infinite; margin-bottom: 16px;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
-    #controls {
-      position: fixed; top: 20px; right: 20px; z-index: 10; display: flex; gap: 8px;
-    }
-    #controls button {
-      background: rgba(0,0,0,0.4); color: rgba(255,255,255,0.8);
-      border: 1px solid rgba(255,255,255,0.2); padding: 8px 14px;
-      border-radius: 20px; font-size: 12px; cursor: pointer;
-      font-family: inherit; transition: all 0.3s; backdrop-filter: blur(4px);
-    }
-    #controls button:hover { background: rgba(0,0,0,0.6); }
-    #controls button.active { background: rgba(107,123,94,0.6); border-color: rgba(107,123,94,0.8); }
     #room-select {
       position: fixed; top: 20px; left: 20px; z-index: 10;
     }
@@ -48,6 +37,28 @@
     }
     #room-select button:hover { background: rgba(0,0,0,0.6); }
     #room-select button.active { background: rgba(107,123,94,0.6); border-color: rgba(107,123,94,0.8); }
+
+    /* Painting detail overlay */
+    #painting-overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.85); z-index: 50;
+      display: none; align-items: center; justify-content: center;
+      flex-direction: column; cursor: zoom-out;
+      backdrop-filter: blur(8px);
+    }
+    #painting-overlay.visible { display: flex; }
+    #painting-overlay img {
+      max-width: 92vw; max-height: 78vh; object-fit: contain;
+      border: 3px solid rgba(255,255,255,0.15); border-radius: 4px;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+    }
+    #painting-overlay .painting-title {
+      color: rgba(255,255,255,0.85); font-size: 18px; margin-top: 16px;
+      letter-spacing: 2px;
+    }
+    #painting-overlay .painting-hint {
+      color: rgba(255,255,255,0.4); font-size: 11px; margin-top: 8px;
+    }
   </style>
 </head>
 <body>
@@ -61,11 +72,14 @@
     <button class="active" onclick="switchRoom(1)">第1室</button>
     <button onclick="switchRoom(2)">第2室</button>
   </div>
-  <div id="controls">
-    <button id="btn-auto" class="active" onclick="toggleAuto()">自動鑑賞</button>
-    <button onclick="toggleManual()">手動操作</button>
+  <div id="info">自動鑑賞中 — クリックで絵画を拡大</div>
+
+  <!-- Painting detail overlay -->
+  <div id="painting-overlay" onclick="closeOverlay()">
+    <img id="painting-img" src="" alt="">
+    <div class="painting-title" id="painting-title"></div>
+    <div class="painting-hint">クリックで戻る</div>
   </div>
-  <div id="info">自動鑑賞中 — スクロールでズーム / クリックで手動に切替</div>
 
   <script type="importmap">
   {
@@ -78,7 +92,22 @@
 
   <script type="module">
     import * as THREE from 'three';
-    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+    // --- Painting data per room ---
+    const PAINTINGS = {
+      1: [
+        { name: 'Le Matin (朝)', url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/fc/Claude_Monet_-_The_Water_Lilies_-_Morning_-_Google_Art_Project.jpg/1280px-Claude_Monet_-_The_Water_Lilies_-_Morning_-_Google_Art_Project.jpg', angleStart: 0, angleEnd: 0.25 },
+        { name: 'Les Nuages (雲)', url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/Claude_Monet_-_The_Water_Lilies_-_The_Clouds_-_Google_Art_Project.jpg/1280px-Claude_Monet_-_The_Water_Lilies_-_The_Clouds_-_Google_Art_Project.jpg', angleStart: 0.25, angleEnd: 0.5 },
+        { name: 'Reflets verts (緑の反映)', url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/7e/Claude_Monet_-_The_Water_Lilies_-_Green_Reflections_-_Google_Art_Project.jpg/1280px-Claude_Monet_-_The_Water_Lilies_-_Green_Reflections_-_Google_Art_Project.jpg', angleStart: 0.5, angleEnd: 0.75 },
+        { name: 'Soleil couchant (落日)', url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/66/Claude_Monet_-_The_Water_Lilies_-_Setting_Sun_-_Google_Art_Project.jpg/1280px-Claude_Monet_-_The_Water_Lilies_-_Setting_Sun_-_Google_Art_Project.jpg', angleStart: 0.75, angleEnd: 1.0 },
+      ],
+      2: [
+        { name: 'Le Matin clair aux saules (柳のある朝)', url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/26/Claude_Monet_-_The_Water_Lilies_-_Clear_Morning_with_Willows_-_Google_Art_Project.jpg/1280px-Claude_Monet_-_The_Water_Lilies_-_Clear_Morning_with_Willows_-_Google_Art_Project.jpg', angleStart: 0, angleEnd: 0.25 },
+        { name: 'Les Deux saules (二本の柳)', url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/Claude_Monet_-_The_Water_Lilies_-_The_Two_Willows_-_Google_Art_Project.jpg/1280px-Claude_Monet_-_The_Water_Lilies_-_The_Two_Willows_-_Google_Art_Project.jpg', angleStart: 0.25, angleEnd: 0.5 },
+        { name: "Reflets d'arbres (木の反映)", url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/43/Claude_Monet_-_The_Water_Lilies_-_Tree_Reflections_-_Google_Art_Project.jpg/1280px-Claude_Monet_-_The_Water_Lilies_-_Tree_Reflections_-_Google_Art_Project.jpg', angleStart: 0.5, angleEnd: 0.75 },
+        { name: 'Le Matin (朝) II', url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/fc/Claude_Monet_-_The_Water_Lilies_-_Morning_-_Google_Art_Project.jpg/1280px-Claude_Monet_-_The_Water_Lilies_-_Morning_-_Google_Art_Project.jpg', angleStart: 0.75, angleEnd: 1.0 },
+      ],
+    };
 
     // --- Scene ---
     const scene = new THREE.Scene();
@@ -92,7 +121,7 @@
 
     // --- Panorama sphere (inside-out) ---
     const sphereGeo = new THREE.SphereGeometry(50, 64, 32);
-    sphereGeo.scale(-1, 1, 1); // Flip normals inward
+    sphereGeo.scale(-1, 1, 1);
     const textureLoader = new THREE.TextureLoader();
     let sphereMat, sphereMesh;
     let currentRoom = 1;
@@ -130,69 +159,84 @@
       });
     }
 
-    // --- OrbitControls ---
-    const controls = new OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.05;
-    controls.enablePan = false;
-    controls.enableZoom = true;
-    controls.minDistance = 0.01;
-    controls.maxDistance = 0.01;
-    controls.minFov = 20;
-    controls.rotateSpeed = -0.3; // Inverted for inside sphere
-    controls.enableRotate = false; // Start in auto
-
-    // Zoom via FOV
+    // --- Zoom via scroll (FOV) ---
     renderer.domElement.addEventListener('wheel', (e) => {
       e.preventDefault();
       camera.fov = Math.max(30, Math.min(90, camera.fov + e.deltaY * 0.05));
       camera.updateProjectionMatrix();
     }, { passive: false });
 
-    // --- Auto rotation ---
-    let autoMode = true;
+    // --- Click to show painting detail ---
+    let clickStart = null;
+    renderer.domElement.addEventListener('pointerdown', (e) => {
+      clickStart = { x: e.clientX, y: e.clientY, time: Date.now() };
+    });
+
+    renderer.domElement.addEventListener('pointerup', (e) => {
+      if (!clickStart) return;
+      const dx = e.clientX - clickStart.x;
+      const dy = e.clientY - clickStart.y;
+      const dt = Date.now() - clickStart.time;
+      clickStart = null;
+
+      // Only trigger on short taps (not drags)
+      if (Math.sqrt(dx*dx + dy*dy) > 10 || dt > 300) return;
+
+      // Determine which painting the camera is looking at
+      const dir = new THREE.Vector3();
+      camera.getWorldDirection(dir);
+      // Convert camera direction to angle (0-1 range, matching painting positions)
+      let angle = Math.atan2(dir.z, dir.x);
+      if (angle < 0) angle += Math.PI * 2;
+      const normalizedAngle = angle / (Math.PI * 2);
+
+      const paintings = PAINTINGS[currentRoom];
+      const painting = paintings.find(p =>
+        normalizedAngle >= p.angleStart && normalizedAngle < p.angleEnd
+      );
+
+      if (painting) {
+        showPaintingOverlay(painting);
+      }
+    });
+
+    // --- Painting overlay ---
+    function showPaintingOverlay(painting) {
+      const overlay = document.getElementById('painting-overlay');
+      const img = document.getElementById('painting-img');
+      const title = document.getElementById('painting-title');
+      img.src = painting.url;
+      title.textContent = painting.name;
+      overlay.classList.add('visible');
+    }
+
+    function closeOverlay() {
+      document.getElementById('painting-overlay').classList.remove('visible');
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.code === 'Escape') closeOverlay();
+    });
+
+    window.switchRoom = (num) => loadRoom(num);
+    window.closeOverlay = closeOverlay;
+
+    // --- Auto rotation only ---
     let autoAngle = 0;
     const autoSpeed = 0.06;
-
-    function toggleAuto() {
-      autoMode = true;
-      controls.enableRotate = false;
-      document.getElementById('btn-auto').classList.add('active');
-      document.getElementById('info').textContent = '自動鑑賞中 — スクロールでズーム / クリックで手動に切替';
-    }
-
-    function toggleManual() {
-      autoMode = false;
-      controls.enableRotate = true;
-      controls.rotateSpeed = -0.3;
-      document.getElementById('btn-auto').classList.remove('active');
-      document.getElementById('info').textContent = 'ドラッグ: 回転 / スクロール: ズーム / ESCで自動鑑賞に戻る';
-    }
-
-    renderer.domElement.addEventListener('click', () => { if (autoMode) toggleManual(); });
-    document.addEventListener('keydown', (e) => { if (e.code === 'Escape' && !autoMode) toggleAuto(); });
-    window.toggleAuto = toggleAuto;
-    window.toggleManual = toggleManual;
-    window.switchRoom = (num) => loadRoom(num);
-
-    // --- Animation ---
     const clock = new THREE.Clock();
+
     function animate() {
       requestAnimationFrame(animate);
       const delta = clock.getDelta();
 
-      if (autoMode) {
-        autoAngle += autoSpeed * delta;
-        // Slowly rotate camera around the panorama
-        const target = new THREE.Vector3(
-          Math.cos(autoAngle) * 10,
-          0,
-          Math.sin(autoAngle) * 10
-        );
-        camera.lookAt(target);
-      } else {
-        controls.update();
-      }
+      autoAngle += autoSpeed * delta;
+      const target = new THREE.Vector3(
+        Math.cos(autoAngle) * 10,
+        0,
+        Math.sin(autoAngle) * 10
+      );
+      camera.lookAt(target);
 
       renderer.render(scene, camera);
     }
