@@ -7,7 +7,7 @@
   <style>
     * { margin: 0; padding: 0; }
     body { overflow: hidden; background: #000; font-family: 'Georgia', 'Hiragino Mincho ProN', serif; }
-    canvas { display: block; }
+    canvas { display: block; cursor: pointer; }
     #info {
       position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
       color: rgba(255,255,255,0.7); background: rgba(0,0,0,0.4);
@@ -72,7 +72,7 @@
     <button class="active" onclick="switchRoom(1)">第1室</button>
     <button onclick="switchRoom(2)">第2室</button>
   </div>
-  <div id="info">自動鑑賞中 — クリックで絵画を拡大 | v15</div>
+  <div id="info">自動鑑賞中 — クリックで絵画を拡大 | v16</div>
 
   <!-- Painting detail overlay -->
   <div id="painting-overlay" onclick="closeOverlay()">
@@ -180,19 +180,17 @@
       clickStart = null;
 
       // Only trigger on short taps (not drags)
-      if (Math.sqrt(dx*dx + dy*dy) > 10 || dt > 300) return;
+      if (Math.sqrt(dx*dx + dy*dy) > 10 || dt > 500) return;
 
-      // Determine which painting the camera is looking at
-      const dir = new THREE.Vector3();
-      camera.getWorldDirection(dir);
-      // Convert camera direction to angle (0-1 range, matching painting positions)
-      let angle = Math.atan2(dir.z, dir.x);
-      if (angle < 0) angle += Math.PI * 2;
-      const normalizedAngle = angle / (Math.PI * 2);
+      // Use autoAngle to determine which painting is in view
+      // autoAngle maps to Blender's angle: painting i is at i/4 to (i+1)/4 of full circle
+      // Normalize autoAngle to 0-1 range
+      let normalized = (autoAngle % (Math.PI * 2)) / (Math.PI * 2);
+      if (normalized < 0) normalized += 1;
 
       const paintings = PAINTINGS[currentRoom];
       const painting = paintings.find(p =>
-        normalizedAngle >= p.angleStart && normalizedAngle < p.angleEnd
+        normalized >= p.angleStart && normalized < p.angleEnd
       );
 
       if (painting) {
