@@ -72,7 +72,7 @@
     <button class="active" onclick="switchRoom(1)">第1室</button>
     <button onclick="switchRoom(2)">第2室</button>
   </div>
-  <div id="info">自動鑑賞中 — クリックで絵画を拡大 | v16</div>
+  <div id="info">自動鑑賞中 — クリックで絵画を拡大 | v17</div>
 
   <!-- Painting detail overlay -->
   <div id="painting-overlay" onclick="closeOverlay()">
@@ -183,9 +183,8 @@
       if (Math.sqrt(dx*dx + dy*dy) > 10 || dt > 500) return;
 
       // Use autoAngle to determine which painting is in view
-      // autoAngle maps to Blender's angle: painting i is at i/4 to (i+1)/4 of full circle
-      // Normalize autoAngle to 0-1 range
-      let normalized = (autoAngle % (Math.PI * 2)) / (Math.PI * 2);
+      // Offset by -0.25 (one painting) to align click with correct painting
+      let normalized = (autoAngle % (Math.PI * 2)) / (Math.PI * 2) - 0.25;
       if (normalized < 0) normalized += 1;
 
       const paintings = PAINTINGS[currentRoom];
