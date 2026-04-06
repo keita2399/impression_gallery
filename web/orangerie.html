@@ -7,13 +7,23 @@
   <style>
     * { margin: 0; padding: 0; }
     body { overflow: hidden; background: #000; font-family: 'Georgia', 'Hiragino Mincho ProN', serif; }
-    canvas { display: block; cursor: pointer; }
+    canvas { display: block; }
     #info {
       position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
       color: rgba(255,255,255,0.7); background: rgba(0,0,0,0.4);
       padding: 8px 20px; border-radius: 20px; font-size: 12px;
-      pointer-events: none; z-index: 10;
+      pointer-events: none; z-index: 10; transition: opacity 1s;
     }
+    #artwork-info {
+      position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+      color: #fff; background: rgba(0,0,0,0.5); padding: 12px 24px;
+      border-radius: 8px; font-size: 15px; text-align: center;
+      z-index: 10; pointer-events: none; opacity: 0; transition: opacity 1.5s;
+      backdrop-filter: blur(4px); letter-spacing: 2px;
+    }
+    #artwork-info.show { opacity: 1; }
+    #artwork-info h3 { color: #e8d8b8; font-size: 17px; margin-bottom: 4px; font-weight: normal; }
+    #artwork-info p { color: #bbb; font-size: 13px; }
     #loading {
       position: fixed; top: 0; left: 0; right: 0; bottom: 0;
       background: #f5f0e8; display: flex; align-items: center; justify-content: center;
@@ -26,6 +36,17 @@
       border-radius: 50%; animation: spin 1.5s linear infinite; margin-bottom: 16px;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
+    #controls {
+      position: fixed; top: 20px; right: 20px; z-index: 10; display: flex; gap: 8px;
+    }
+    #controls button {
+      background: rgba(0,0,0,0.4); color: rgba(255,255,255,0.8);
+      border: 1px solid rgba(255,255,255,0.2); padding: 8px 14px;
+      border-radius: 20px; font-size: 12px; cursor: pointer;
+      font-family: inherit; transition: all 0.3s; backdrop-filter: blur(4px);
+    }
+    #controls button:hover { background: rgba(0,0,0,0.6); }
+    #controls button.active { background: rgba(107,123,94,0.6); border-color: rgba(107,123,94,0.8); }
     #room-select {
       position: fixed; top: 20px; left: 20px; z-index: 10;
     }
@@ -37,27 +58,28 @@
     }
     #room-select button:hover { background: rgba(0,0,0,0.6); }
     #room-select button.active { background: rgba(107,123,94,0.6); border-color: rgba(107,123,94,0.8); }
-
-    /* Painting detail overlay */
     #painting-overlay {
       position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0,0,0,0.85); z-index: 50;
+      background: rgba(0,0,0,0.88); z-index: 50;
       display: none; align-items: center; justify-content: center;
       flex-direction: column; cursor: zoom-out;
-      backdrop-filter: blur(8px);
+      backdrop-filter: blur(10px);
     }
     #painting-overlay.visible { display: flex; }
     #painting-overlay img {
-      max-width: 92vw; max-height: 78vh; object-fit: contain;
-      border: 3px solid rgba(255,255,255,0.15); border-radius: 4px;
-      box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+      max-width: 92vw; max-height: 76vh; object-fit: contain;
+      border: 2px solid rgba(255,255,255,0.12); border-radius: 4px;
+      box-shadow: 0 8px 48px rgba(0,0,0,0.7);
     }
     #painting-overlay .painting-title {
-      color: rgba(255,255,255,0.85); font-size: 18px; margin-top: 16px;
-      letter-spacing: 2px;
+      color: rgba(255,255,255,0.85); font-size: 16px; margin-top: 18px;
+      letter-spacing: 2px; font-weight: normal;
+    }
+    #painting-overlay .painting-sub {
+      color: rgba(255,255,255,0.5); font-size: 13px; margin-top: 6px; letter-spacing: 1px;
     }
     #painting-overlay .painting-hint {
-      color: rgba(255,255,255,0.4); font-size: 11px; margin-top: 8px;
+      color: rgba(255,255,255,0.3); font-size: 11px; margin-top: 12px;
     }
   </style>
 </head>
@@ -72,13 +94,20 @@
     <button class="active" onclick="switchRoom(1)">第1室</button>
     <button onclick="switchRoom(2)">第2室</button>
   </div>
-  <div id="info">自動鑑賞中 — クリックで絵画を拡大 | v22</div>
-
-  <!-- Painting detail overlay -->
+  <div id="controls">
+    <button id="btn-auto" class="active" onclick="toggleAuto()">自動鑑賞</button>
+    <button onclick="toggleManual()">手動操作</button>
+  </div>
+  <div id="info">自動鑑賞中 — クリックで絵画を拡大 / タップで手動操作</div>
+  <div id="artwork-info">
+    <h3 id="art-title"></h3>
+    <p id="art-sub"></p>
+  </div>
   <div id="painting-overlay" onclick="closeOverlay()">
     <img id="painting-img" src="" alt="">
     <div class="painting-title" id="painting-title"></div>
-    <div class="painting-hint">クリックで戻る</div>
+    <div class="painting-sub" id="painting-sub"></div>
+    <div class="painting-hint">タップ / クリックで戻る</div>
   </div>
 
   <script type="importmap">
@@ -92,168 +121,235 @@
 
   <script type="module">
     import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-    // --- Painting data per room ---
-    const PAINTINGS = {
-      1: [
-        { name: 'Le Matin (朝)', url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/fc/Claude_Monet_-_The_Water_Lilies_-_Morning_-_Google_Art_Project.jpg/1280px-Claude_Monet_-_The_Water_Lilies_-_Morning_-_Google_Art_Project.jpg', angleStart: 0, angleEnd: 0.25 },
-        { name: 'Les Nuages (雲)', url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/Claude_Monet_-_The_Water_Lilies_-_The_Clouds_-_Google_Art_Project.jpg/1280px-Claude_Monet_-_The_Water_Lilies_-_The_Clouds_-_Google_Art_Project.jpg', angleStart: 0.25, angleEnd: 0.5 },
-        { name: 'Reflets verts (緑の反映)', url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/7e/Claude_Monet_-_The_Water_Lilies_-_Green_Reflections_-_Google_Art_Project.jpg/1280px-Claude_Monet_-_The_Water_Lilies_-_Green_Reflections_-_Google_Art_Project.jpg', angleStart: 0.5, angleEnd: 0.75 },
-        { name: 'Soleil couchant (落日)', url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/66/Claude_Monet_-_The_Water_Lilies_-_Setting_Sun_-_Google_Art_Project.jpg/1280px-Claude_Monet_-_The_Water_Lilies_-_Setting_Sun_-_Google_Art_Project.jpg', angleStart: 0.75, angleEnd: 1.0 },
-      ],
-      2: [
-        { name: 'Le Matin clair aux saules (柳のある朝)', url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/26/Claude_Monet_-_The_Water_Lilies_-_Clear_Morning_with_Willows_-_Google_Art_Project.jpg/1280px-Claude_Monet_-_The_Water_Lilies_-_Clear_Morning_with_Willows_-_Google_Art_Project.jpg', angleStart: 0, angleEnd: 0.25 },
-        { name: 'Les Deux saules (二本の柳)', url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/Claude_Monet_-_The_Water_Lilies_-_The_Two_Willows_-_Google_Art_Project.jpg/1280px-Claude_Monet_-_The_Water_Lilies_-_The_Two_Willows_-_Google_Art_Project.jpg', angleStart: 0.25, angleEnd: 0.5 },
-        { name: "Reflets d'arbres (木の反映)", url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/43/Claude_Monet_-_The_Water_Lilies_-_Tree_Reflections_-_Google_Art_Project.jpg/1280px-Claude_Monet_-_The_Water_Lilies_-_Tree_Reflections_-_Google_Art_Project.jpg', angleStart: 0.5, angleEnd: 0.75 },
-        { name: 'Le Matin (朝) II', url: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/fc/Claude_Monet_-_The_Water_Lilies_-_Morning_-_Google_Art_Project.jpg/1280px-Claude_Monet_-_The_Water_Lilies_-_Morning_-_Google_Art_Project.jpg', angleStart: 0.75, angleEnd: 1.0 },
-      ],
+    const PROXY = 'https://impressionist-bot.vercel.app/api/image?met=';
+
+    const ROOMS = {
+      1: {
+        name: '第1室',
+        panels: [
+          { title: 'Les Nymphéas — Le Matin', sub: '睡蓮 — 朝', img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/fc/Claude_Monet_-_The_Water_Lilies_-_Morning_-_Google_Art_Project.jpg/1280px-Claude_Monet_-_The_Water_Lilies_-_Morning_-_Google_Art_Project.jpg' },
+          { title: 'Les Nymphéas — Les Nuages', sub: '睡蓮 — 雲', img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/Claude_Monet_-_The_Water_Lilies_-_The_Clouds_-_Google_Art_Project.jpg/1280px-Claude_Monet_-_The_Water_Lilies_-_The_Clouds_-_Google_Art_Project.jpg' },
+          { title: 'Les Nymphéas — Reflets verts', sub: '睡蓮 — 緑の反映', img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/7e/Claude_Monet_-_The_Water_Lilies_-_Green_Reflections_-_Google_Art_Project.jpg/1280px-Claude_Monet_-_The_Water_Lilies_-_Green_Reflections_-_Google_Art_Project.jpg' },
+          { title: 'Les Nymphéas — Soleil couchant', sub: '睡蓮 — 落日', img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/66/Claude_Monet_-_The_Water_Lilies_-_Setting_Sun_-_Google_Art_Project.jpg/1280px-Claude_Monet_-_The_Water_Lilies_-_Setting_Sun_-_Google_Art_Project.jpg' },
+        ]
+      },
+      2: {
+        name: '第2室',
+        panels: [
+          { title: 'Les Nymphéas — Le Matin clair aux saules', sub: '睡蓮 — 柳のある晴れた朝', img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/26/Claude_Monet_-_The_Water_Lilies_-_Clear_Morning_with_Willows_-_Google_Art_Project.jpg/1280px-Claude_Monet_-_The_Water_Lilies_-_Clear_Morning_with_Willows_-_Google_Art_Project.jpg' },
+          { title: 'Les Nymphéas — Les Deux saules', sub: '睡蓮 — 2本の柳', img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/Claude_Monet_-_The_Water_Lilies_-_The_Two_Willows_-_Google_Art_Project.jpg/1280px-Claude_Monet_-_The_Water_Lilies_-_The_Two_Willows_-_Google_Art_Project.jpg' },
+          { title: "Les Nymphéas — Reflets d'arbres", sub: '睡蓮 — 木々の反映', img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/43/Claude_Monet_-_The_Water_Lilies_-_Tree_Reflections_-_Google_Art_Project.jpg/1280px-Claude_Monet_-_The_Water_Lilies_-_Tree_Reflections_-_Google_Art_Project.jpg' },
+          { title: 'Les Nymphéas — Le Matin', sub: '睡蓮 — 朝（別パネル）', img: 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/fc/Claude_Monet_-_The_Water_Lilies_-_Morning_-_Google_Art_Project.jpg/1280px-Claude_Monet_-_The_Water_Lilies_-_Morning_-_Google_Art_Project.jpg' },
+        ]
+      }
     };
 
-    // --- Scene ---
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.set(0, 0, 0.01);
+    scene.background = new THREE.Color(0xeae6de);
+
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
+    camera.position.set(0, 1.5, 0);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.0;
     document.body.appendChild(renderer.domElement);
 
-    // --- Panorama sphere (inside-out) ---
-    const sphereGeo = new THREE.SphereGeometry(50, 64, 32);
-    sphereGeo.scale(-1, 1, 1);
-    const textureLoader = new THREE.TextureLoader();
-    let sphereMat, sphereMesh;
-    let currentRoom = 1;
+    const orbitControls = new OrbitControls(camera, renderer.domElement);
+    orbitControls.enableDamping = true;
+    orbitControls.dampingFactor = 0.05;
+    orbitControls.enablePan = false;
+    orbitControls.minDistance = 0.5;
+    orbitControls.maxDistance = 6;
+    orbitControls.minPolarAngle = Math.PI * 0.3;
+    orbitControls.maxPolarAngle = Math.PI * 0.7;
+    orbitControls.target.set(0, 1.8, 0);
+    orbitControls.enabled = true;
+    orbitControls.enableRotate = false;
+    orbitControls.enableZoom = true;
 
-    function loadRoom(roomNum) {
-      currentRoom = roomNum;
-      document.getElementById('loading').style.display = 'flex';
-      document.getElementById('loading-text').textContent =
-        roomNum === 1 ? '第1室の睡蓮を読み込み中...' : '第2室の睡蓮を読み込み中...';
+    const radiusX = 12, radiusZ = 6, roomHeight = 5, segments = 96;
 
-      document.querySelectorAll('#room-select button').forEach((btn, i) => {
-        btn.classList.toggle('active', i + 1 === roomNum);
+    scene.add(new THREE.AmbientLight(0xf0ece6, 1.5));
+    const hemi = new THREE.HemisphereLight(0xf5f0ea, 0xd8d0c4, 0.9);
+    hemi.position.set(0, 10, 0); scene.add(hemi);
+    const dir = new THREE.DirectionalLight(0xfff8f0, 0.5);
+    dir.position.set(0, 8, 0); scene.add(dir);
+
+    // Floor
+    const ovalShape = new THREE.Shape();
+    for (let i = 0; i <= segments; i++) {
+      const a = (i / segments) * Math.PI * 2;
+      if (i === 0) ovalShape.moveTo(Math.cos(a) * radiusX, Math.sin(a) * radiusZ);
+      else ovalShape.lineTo(Math.cos(a) * radiusX, Math.sin(a) * radiusZ);
+    }
+    const cc = document.createElement('canvas'); cc.width = cc.height = 256;
+    const cx = cc.getContext('2d'); cx.fillStyle = '#b8b0a8'; cx.fillRect(0,0,256,256);
+    for (let y=0;y<256;y++) for (let x=0;x<256;x+=2) {
+      const n=Math.random()*12-6;
+      cx.fillStyle=`rgb(${184+n|0},${176+n|0},${168+n|0})`; cx.fillRect(x,y,2,1);
+    }
+    const ct = new THREE.CanvasTexture(cc);
+    ct.wrapS = ct.wrapT = THREE.RepeatWrapping; ct.repeat.set(8,6);
+    const floor = new THREE.Mesh(new THREE.ShapeGeometry(ovalShape), new THREE.MeshStandardMaterial({map:ct,roughness:0.95,metalness:0}));
+    floor.rotation.x = -Math.PI/2; scene.add(floor);
+
+    // Ceiling
+    const ceil = new THREE.Mesh(new THREE.ShapeGeometry(ovalShape), new THREE.MeshStandardMaterial({color:0xa09888,roughness:1}));
+    ceil.rotation.x = Math.PI/2; ceil.position.y = roomHeight; scene.add(ceil);
+    [{scale:0.9,color:0xb0a898},{scale:0.8,color:0xc8c0b4},{scale:0.7,color:0xdcd6cc}].forEach((r,idx)=>{
+      const s=new THREE.Shape();
+      for(let i=0;i<=64;i++){const a=(i/64)*Math.PI*2; if(i===0)s.moveTo(Math.cos(a)*radiusX*r.scale,Math.sin(a)*radiusZ*r.scale); else s.lineTo(Math.cos(a)*radiusX*r.scale,Math.sin(a)*radiusZ*r.scale);}
+      const m=new THREE.Mesh(new THREE.ShapeGeometry(s),new THREE.MeshStandardMaterial({color:r.color,roughness:1}));
+      m.rotation.x=Math.PI/2; m.position.y=roomHeight-(idx+1)*0.005; scene.add(m);
+    });
+    const slS=new THREE.Shape();
+    for(let i=0;i<=64;i++){const a=(i/64)*Math.PI*2; if(i===0)slS.moveTo(Math.cos(a)*radiusX*0.6,Math.sin(a)*radiusZ*0.6); else slS.lineTo(Math.cos(a)*radiusX*0.6,Math.sin(a)*radiusZ*0.6);}
+    const sl=new THREE.Mesh(new THREE.ShapeGeometry(slS),new THREE.MeshStandardMaterial({color:0xffffff,emissive:0xfaf6f0,emissiveIntensity:0.4,roughness:1}));
+    sl.rotation.x=Math.PI/2; sl.position.y=roomHeight-0.02; scene.add(sl);
+    const ra=(radiusX*0.6+radiusZ*0.6)/2;
+    const rim=new THREE.Mesh(new THREE.TorusGeometry(ra,0.06,8,96),new THREE.MeshStandardMaterial({color:0x8a8478}));
+    rim.rotation.x=Math.PI/2; rim.position.y=roomHeight-0.025; rim.scale.set((radiusX*0.6)/ra,(radiusZ*0.6)/ra,1); scene.add(rim);
+
+    // Wall
+    const wv=[],wc=[],wi=[];
+    for(let i=0;i<=segments;i++){
+      const a=(i/segments)*Math.PI*2,x=Math.cos(a)*radiusX,z=Math.sin(a)*radiusZ;
+      wv.push(x,0,z); wc.push(0.88,0.86,0.83);
+      wv.push(x,roomHeight,z); wc.push(0.96,0.95,0.93);
+      if(i<segments){const a=i*2,b=i*2+1,c=(i+1)*2,d=(i+1)*2+1; wi.push(a,c,b,b,c,d);}
+    }
+    const wg=new THREE.BufferGeometry();
+    wg.setAttribute('position',new THREE.Float32BufferAttribute(wv,3));
+    wg.setAttribute('color',new THREE.Float32BufferAttribute(wc,3));
+    wg.setIndex(wi); wg.computeVertexNormals();
+    scene.add(new THREE.Mesh(wg,new THREE.MeshStandardMaterial({vertexColors:true,side:THREE.BackSide,roughness:0.9})));
+
+    // Bench
+    const bm=new THREE.MeshStandardMaterial({color:0x9a8a70,roughness:0.5,metalness:0.02});
+    const bench=new THREE.Mesh(new THREE.TorusGeometry(1.5,0.12,8,32),bm);
+    bench.rotation.x=Math.PI/2; bench.position.y=0.45; scene.add(bench);
+    const lm=new THREE.MeshStandardMaterial({color:0x3a3a3a});
+    for(let i=0;i<4;i++){const a=(i/4)*Math.PI*2,leg=new THREE.Mesh(new THREE.CylinderGeometry(0.03,0.03,0.45),lm); leg.position.set(Math.cos(a)*1.5,0.225,Math.sin(a)*1.5); scene.add(leg);}
+
+    // Panels
+    const tl=new THREE.TextureLoader();
+    let panelGroups=[],paintingMeshes=[],loadCount=0,loadTarget=0,currentRoom=1;
+
+    function clearPanels(){
+      panelGroups.forEach(g=>{scene.remove(g);g.traverse(c=>{if(c.geometry)c.geometry.dispose();if(c.material){if(c.material.map)c.material.map.dispose();c.material.dispose();}});});
+      panelGroups=[]; paintingMeshes=[];
+    }
+
+    function loadRoom(roomNum){
+      currentRoom=roomNum; clearPanels(); loadCount=0;
+      const room=ROOMS[roomNum],panels=room.panels;
+      loadTarget=panels.length;
+      document.getElementById('loading').style.display='flex';
+      document.getElementById('loading-text').textContent=`${room.name}の睡蓮を読み込み中...`;
+      document.querySelectorAll('#room-select button').forEach((b,i)=>b.classList.toggle('active',i+1===roomNum));
+      const pH=2.0,pY=2.0,gap=0.03,cs=32,wo=0.08;
+      const fm=new THREE.MeshStandardMaterial({color:0xc0a060,metalness:0.7,roughness:0.3});
+      panels.forEach((panel,i)=>{
+        const sa=(i/4)*Math.PI*2+gap,ea=((i+1)/4)*Math.PI*2-gap,ma=(sa+ea)/2;
+        const group=new THREE.Group();
+        const pos=[],uv=[],idx=[];
+        for(let s=0;s<=cs;s++){
+          const t=s/cs,a=sa+(ea-sa)*t,x=Math.cos(a)*(radiusX-wo),z=Math.sin(a)*(radiusZ-wo);
+          pos.push(x,pY-pH/2,z); uv.push(t,0);
+          pos.push(x,pY+pH/2,z); uv.push(t,1);
+          if(s<cs){const a=s*2,b=s*2+1,c=(s+1)*2,d=(s+1)*2+1; idx.push(a,b,c,b,d,c);}
+        }
+        const geo=new THREE.BufferGeometry();
+        geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+        geo.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));
+        geo.setIndex(idx); geo.computeVertexNormals();
+        const pm=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({color:0xd0c8b8,side:THREE.DoubleSide}));
+        pm.userData={img:panel.img,title:panel.title,sub:panel.sub};
+        group.add(pm); paintingMeshes.push(pm);
+        tl.load(`${PROXY}${encodeURIComponent(panel.img)}`,(tex)=>{
+          tex.colorSpace=THREE.SRGBColorSpace;
+          pm.material.dispose(); pm.material=new THREE.MeshStandardMaterial({map:tex,roughness:0.85,side:THREE.DoubleSide});
+          loadCount++; document.getElementById('loading-text').textContent=`睡蓮を展示中... (${loadCount}/${loadTarget})`;
+          if(loadCount>=loadTarget)setTimeout(()=>document.getElementById('loading').style.display='none',500);
+        },undefined,()=>{loadCount++;if(loadCount>=loadTarget)setTimeout(()=>document.getElementById('loading').style.display='none',500);});
+        [pY+pH/2,pY-pH/2].forEach(fy=>{
+          const pts=[];
+          for(let s=0;s<=cs;s++){const t=s/cs,a=sa+(ea-sa)*t; pts.push(new THREE.Vector3(Math.cos(a)*(radiusX-wo+0.01),fy,Math.sin(a)*(radiusZ-wo+0.01)));}
+          group.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts),cs,0.02,4,false),fm));
+        });
+        group.userData={title:panel.title,sub:panel.sub,img:panel.img,angle:ma};
+        panelGroups.push(group); scene.add(group);
       });
-
-      const url = `panorama_room${roomNum}.jpg?v=${Date.now()}`;
-      textureLoader.load(url, (texture) => {
-        texture.colorSpace = THREE.SRGBColorSpace;
-        if (sphereMesh) {
-          sphereMesh.material.map.dispose();
-          sphereMesh.material.map = texture;
-          sphereMesh.material.needsUpdate = true;
-        } else {
-          sphereMat = new THREE.MeshBasicMaterial({ map: texture });
-          sphereMesh = new THREE.Mesh(sphereGeo, sphereMat);
-          scene.add(sphereMesh);
-        }
-        document.getElementById('loading').style.display = 'none';
-      }, (progress) => {
-        if (progress.total > 0) {
-          const pct = Math.round((progress.loaded / progress.total) * 100);
-          document.getElementById('loading-text').textContent = `読み込み中... ${pct}%`;
-        }
-      }, () => {
-        document.getElementById('loading-text').textContent = 'エラーが発生しました';
-      });
     }
 
-    // --- Zoom via scroll (FOV) ---
-    renderer.domElement.addEventListener('wheel', (e) => {
-      e.preventDefault();
-      camera.fov = Math.max(30, Math.min(90, camera.fov + e.deltaY * 0.05));
-      camera.updateProjectionMatrix();
-    }, { passive: false });
+    let autoMode=true,autoAngle=0,currentPanelIndex=-1;
+    const autoSpeed=0.04;
 
-    // --- Click to show painting detail (raycast from click position) ---
-    const raycaster = new THREE.Raycaster();
-    let clickStart = null;
-    renderer.domElement.addEventListener('pointerdown', (e) => {
-      clickStart = { x: e.clientX, y: e.clientY, time: Date.now() };
+    function toggleAuto(){autoMode=true;orbitControls.enableRotate=false;document.getElementById('btn-auto').classList.add('active');document.getElementById('info').textContent='自動鑑賞中 — クリックで絵画を拡大 / タップで手動操作';}
+    function toggleManual(){autoMode=false;orbitControls.enableRotate=true;document.getElementById('btn-auto').classList.remove('active');document.getElementById('info').textContent='ドラッグ: 回転 / スクロール: ズーム / ESCで自動鑑賞に戻る';}
+    window.toggleAuto=toggleAuto; window.toggleManual=toggleManual; window.switchRoom=(n)=>loadRoom(n);
+
+    const raycaster=new THREE.Raycaster(); let pStart=null;
+    renderer.domElement.addEventListener('pointerdown',(e)=>{pStart={x:e.clientX,y:e.clientY,t:Date.now()};});
+    renderer.domElement.addEventListener('pointerup',(e)=>{
+      if(!pStart)return;
+      const dx=e.clientX-pStart.x,dy=e.clientY-pStart.y,dt=Date.now()-pStart.t; pStart=null;
+      if(Math.sqrt(dx*dx+dy*dy)>10||dt>500)return;
+      const mouse=new THREE.Vector2((e.clientX/window.innerWidth)*2-1,-(e.clientY/window.innerHeight)*2+1);
+      raycaster.setFromCamera(mouse,camera);
+      const hits=raycaster.intersectObjects(paintingMeshes);
+      if(hits.length>0){const {title,sub,img}=hits[0].object.userData; showOverlay(img,title,sub);}
+      else if(autoMode)toggleManual();
     });
 
-    renderer.domElement.addEventListener('pointerup', (e) => {
-      if (!clickStart) return;
-      const dx = e.clientX - clickStart.x;
-      const dy = e.clientY - clickStart.y;
-      const dt = Date.now() - clickStart.time;
-      clickStart = null;
-
-      // Only trigger on short taps (not drags)
-      if (Math.sqrt(dx*dx + dy*dy) > 10 || dt > 500) return;
-
-      // Raycast from click position to panorama sphere
-      const mouse = new THREE.Vector2(
-        (e.clientX / window.innerWidth) * 2 - 1,
-        -(e.clientY / window.innerHeight) * 2 + 1
-      );
-      raycaster.setFromCamera(mouse, camera);
-      const intersects = raycaster.intersectObject(sphereMesh);
-
-      if (intersects.length > 0) {
-        const uv = intersects[0].uv;
-        // UV.x maps to horizontal angle (0-1 = full 360°)
-        // Match UV.x to painting angle ranges
-        const paintings = PAINTINGS[currentRoom];
-        const painting = paintings.find(p =>
-          uv.x >= p.angleStart && uv.x < p.angleEnd
-        );
-        if (painting) {
-          showPaintingOverlay(painting);
-        }
-      }
-    });
-
-    // --- Painting overlay ---
-    function showPaintingOverlay(painting) {
-      const overlay = document.getElementById('painting-overlay');
-      const img = document.getElementById('painting-img');
-      const title = document.getElementById('painting-title');
-      img.src = painting.url;
-      title.textContent = painting.name;
-      overlay.classList.add('visible');
+    function showOverlay(img,title,sub){
+      document.getElementById('painting-img').src=`${PROXY}${encodeURIComponent(img)}`;
+      document.getElementById('painting-title').textContent=title;
+      document.getElementById('painting-sub').textContent=sub||'';
+      document.getElementById('painting-overlay').classList.add('visible');
     }
-
-    function closeOverlay() {
-      document.getElementById('painting-overlay').classList.remove('visible');
-    }
-
-    document.addEventListener('keydown', (e) => {
-      if (e.code === 'Escape') closeOverlay();
+    function closeOverlay(){document.getElementById('painting-overlay').classList.remove('visible');}
+    document.addEventListener('keydown',(e)=>{
+      if(e.code==='Escape'){if(document.getElementById('painting-overlay').classList.contains('visible'))closeOverlay(); else if(!autoMode)toggleAuto();}
     });
+    window.closeOverlay=closeOverlay;
 
-    window.switchRoom = (num) => loadRoom(num);
-    window.closeOverlay = closeOverlay;
+    const artInfoEl=document.getElementById('artwork-info'),artTitleEl=document.getElementById('art-title'),artSubEl=document.getElementById('art-sub');
+    const clock=new THREE.Clock();
 
-    // --- Auto rotation only ---
-    let autoAngle = 0;
-    const autoSpeed = 0.06;
-    const clock = new THREE.Clock();
-
-    function animate() {
+    function animate(){
       requestAnimationFrame(animate);
-      const delta = clock.getDelta();
-
-      autoAngle += autoSpeed * delta;
-      const target = new THREE.Vector3(
-        Math.cos(autoAngle) * 10,
-        0,
-        Math.sin(autoAngle) * 10
-      );
-      camera.lookAt(target);
-
-      renderer.render(scene, camera);
+      const delta=clock.getDelta();
+      if(autoMode){
+        autoAngle+=autoSpeed*delta;
+        camera.position.set(0,1.5,0);
+        const lx=Math.cos(autoAngle)*radiusX,lz=Math.sin(autoAngle)*radiusZ;
+        camera.lookAt(lx,2.0,lz); orbitControls.target.set(lx*0.5,2.0,lz*0.5);
+      } else { orbitControls.update(); }
+      const camDir=new THREE.Vector3(); camera.getWorldDirection(camDir);
+      let cp=-1,cd=-1;
+      for(let i=0;i<panelGroups.length;i++){
+        const {angle}=panelGroups[i].userData;
+        const pp=new THREE.Vector3(Math.cos(angle)*radiusX*0.85,2.0,Math.sin(angle)*radiusZ*0.85);
+        const d=new THREE.Vector3().subVectors(pp,camera.position).normalize();
+        const dot=d.dot(camDir); if(dot>cd){cd=dot;cp=i;}
+      }
+      if(cd>0.6&&cp>=0){
+        if(currentPanelIndex!==cp){currentPanelIndex=cp;artTitleEl.textContent=panelGroups[cp].userData.title;artSubEl.textContent=panelGroups[cp].userData.sub;}
+        artInfoEl.classList.add('show');
+      } else {artInfoEl.classList.remove('show');currentPanelIndex=-1;}
+      renderer.render(scene,camera);
     }
     animate();
 
-    window.addEventListener('resize', () => {
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
-    });
-
-    // --- Initial load ---
+    window.addEventListener('resize',()=>{camera.aspect=window.innerWidth/window.innerHeight;camera.updateProjectionMatrix();renderer.setSize(window.innerWidth,window.innerHeight);});
     loadRoom(1);
   </script>
 </body>
