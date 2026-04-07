@@ -123,7 +123,8 @@
     import * as THREE from 'three';
     import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-    const PROXY = 'https://impressionist-bot.vercel.app/api/image?met=';
+    const _botBase = new URLSearchParams(location.search).get('proxy') || 'https://sanpo-bot.vercel.app';
+    const PROXY = _botBase + '/api/image?met=';
 
     const ROOMS = {
       1: {

@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
+import '../config/constants.dart';
 
 class Artwork {
   final int id;
@@ -169,7 +170,7 @@ class Artwork {
     );
   }
 
-  static const _aicProxy = 'https://impressionist-bot.vercel.app/api/image';
+  static const _aicProxy = '$kBotBaseUrl/api/image';
 
   static String? _aicImageUrl(String? imageId, int width) {
     if (imageId == null) return null;

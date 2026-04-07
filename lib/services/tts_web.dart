@@ -1,6 +1,7 @@
 import 'dart:js_interop';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import '../config/constants.dart';
 
 @JS('eval')
 external JSAny? _eval(JSString code);
@@ -12,7 +13,7 @@ Future<void> speakText(String text) async {
   try {
     // Call TTS proxy API
     final response = await http.post(
-      Uri.parse('https://impressionist-bot.vercel.app/api/tts'),
+      Uri.parse('$kBotBaseUrl/api/tts'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'text': text}),
     );

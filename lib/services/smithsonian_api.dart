@@ -1,11 +1,12 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../config/constants.dart';
 import '../models/artwork.dart';
 import 'art_api.dart';
 
 /// Smithsonian Institution Open Access API実装（プロキシ経由）
 class SmithsonianApi extends ArtApi {
-  static const _proxyUrl = 'https://impressionist-bot.vercel.app/api/smithsonian';
+  static const _proxyUrl = '$kBotBaseUrl/api/smithsonian';
 
   @override
   Map<String, String> get imageHeaders => const {};
@@ -70,7 +71,7 @@ class SmithsonianApi extends ArtApi {
         imageUrl = m['thumbnail'] as String? ?? m['content'] as String?;
         // プロキシ経由にする
         if (imageUrl != null) {
-          imageUrl = 'https://impressionist-bot.vercel.app/api/image?met=${Uri.encodeComponent(imageUrl)}';
+          imageUrl = '$kBotBaseUrl/api/image?met=${Uri.encodeComponent(imageUrl)}';
         }
       }
     }

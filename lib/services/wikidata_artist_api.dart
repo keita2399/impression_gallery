@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:ui' as ui;
 import 'package:http/http.dart' as http;
+import '../config/constants.dart';
 import '../models/artwork.dart';
 import 'art_api.dart';
 
@@ -13,7 +14,7 @@ class WikidataArtistApi extends ArtApi {
   final Map<String, bool Function(Artwork)>? filters; // カスタムフィルター
 
   static const _sparqlDirect = 'https://query.wikidata.org/sparql';
-  static const _sparqlProxy = 'https://impressionist-bot.vercel.app/api/sparql';
+  static const _sparqlProxy = '$kBotBaseUrl/api/sparql';
 
   WikidataArtistApi({
     required this.artistQid,
@@ -47,7 +48,7 @@ class WikidataArtistApi extends ArtApi {
       final thumbPath = uri.path.replaceFirst('/commons/', '/commons/thumb/');
       url = '${uri.scheme}://${uri.host}$thumbPath/${width}px-$fileName';
     }
-    return 'https://impressionist-bot.vercel.app/api/image?met=${Uri.encodeComponent(url)}';
+    return '$kBotBaseUrl/api/image?met=${Uri.encodeComponent(url)}';
   }
 
   /// Convert to proxied full-size URL for detail/zoom views
@@ -55,7 +56,7 @@ class WikidataArtistApi extends ArtApi {
     if (url.startsWith('http://')) {
       url = 'https://${url.substring(7)}';
     }
-    return 'https://impressionist-bot.vercel.app/api/image?met=${Uri.encodeComponent(url)}';
+    return '$kBotBaseUrl/api/image?met=${Uri.encodeComponent(url)}';
   }
 
   Future<List<Artwork>> _fetchAllWorks() async {

@@ -1,11 +1,12 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../config/constants.dart';
 import '../models/artwork.dart';
 import 'art_api.dart';
 
 /// Cleveland Museum of Art API実装（プロキシ経由）
 class ClevelandApi extends ArtApi {
-  static const _baseUrl = 'https://impressionist-bot.vercel.app/api/cleveland';
+  static const _baseUrl = '$kBotBaseUrl/api/cleveland';
 
   @override
   Map<String, String> get imageHeaders => const {};
@@ -105,10 +106,10 @@ class ClevelandApi extends ArtApi {
       final printUrl = (images['print'] as Map<String, dynamic>?)?['url'] as String?;
       // CDN画像もCORSなしのためプロキシ経由
       imageUrl = webUrl != null
-          ? 'https://impressionist-bot.vercel.app/api/image?met=${Uri.encodeComponent(webUrl)}'
+          ? '$kBotBaseUrl/api/image?met=${Uri.encodeComponent(webUrl)}'
           : null;
       imageUrlHigh = printUrl != null
-          ? 'https://impressionist-bot.vercel.app/api/image?met=${Uri.encodeComponent(printUrl)}'
+          ? '$kBotBaseUrl/api/image?met=${Uri.encodeComponent(printUrl)}'
           : imageUrl;
     }
 

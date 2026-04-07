@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
+import '../config/constants.dart';
 import '../models/artwork.dart';
 import 'art_api.dart';
 
@@ -8,7 +9,7 @@ import 'art_api.dart';
 class MetApi extends ArtApi {
   // Web版はCDNブロック回避のためプロキシ経由
   static const _directUrl = 'https://collectionapi.metmuseum.org/public/collection/v1';
-  static const _proxyUrl = 'https://impressionist-bot.vercel.app/api/met-proxy';
+  static const _proxyUrl = '$kBotBaseUrl/api/met-proxy';
 
   static String _buildUrl(String path, [Map<String, String>? params]) {
     if (kIsWeb) {

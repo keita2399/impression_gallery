@@ -6,42 +6,43 @@ set -e
 
 TARGET=${1:-met}
 FLUTTER=/c/flutter/bin/flutter
+DART_DEFINES="--dart-define=BOT_BASE_URL=https://sanpo-bot.vercel.app"
 
 case $TARGET in
   met)
     echo "Building メトロポリタンさんぽ..."
     cp web/index_met.html web/index.html
-    $FLUTTER build web --release -t lib/main_met.dart
+    $FLUTTER build web --release -t lib/main_met.dart $DART_DEFINES
     ;;
   aic)
     echo "Building 印象派さんぽ..."
     cp web/index_aic.html web/index.html
-    $FLUTTER build web --release -t lib/main_aic.dart
+    $FLUTTER build web --release -t lib/main_aic.dart $DART_DEFINES
     ;;
   vermeer)
     echo "Building フェルメールさんぽ..."
     cp web/index_vermeer.html web/index.html
-    $FLUTTER build web --release -t lib/main_vermeer.dart
+    $FLUTTER build web --release -t lib/main_vermeer.dart $DART_DEFINES
     ;;
   rembrandt)
     echo "Building レンブラントさんぽ..."
     cp web/index_rembrandt.html web/index.html
-    $FLUTTER build web --release -t lib/main_rembrandt.dart
+    $FLUTTER build web --release -t lib/main_rembrandt.dart $DART_DEFINES
     ;;
   cleveland)
     echo "Building クリーブランド美術館さんぽ..."
     cp web/index_cleveland.html web/index.html
-    $FLUTTER build web --release -t lib/main_cleveland.dart
+    $FLUTTER build web --release -t lib/main_cleveland.dart $DART_DEFINES
     ;;
   smithsonian)
     echo "Building スミソニアン博物館さんぽ..."
     cp web/index_smithsonian.html web/index.html
-    $FLUTTER build web --release -t lib/main_smithsonian.dart
+    $FLUTTER build web --release -t lib/main_smithsonian.dart $DART_DEFINES
     ;;
   monet)
     echo "Building モネさんぽ..."
     cp web/index_monet.html web/index.html
-    $FLUTTER build web --release -t lib/main_monet.dart
+    $FLUTTER build web --release -t lib/main_monet.dart $DART_DEFINES
     ;;
   *)
     echo "Usage: $0 [met|aic|vermeer|rembrandt|cleveland|smithsonian|monet]"
